@@ -27,14 +27,20 @@
 
 ## Install
 
-**Homebrew** (recommended)
+**One line** (downloads the latest release, verifies its SHA-256, installs to Applications, opens it):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/damionrashford/overdrive/main/install.sh | sh
+```
+
+**Homebrew:**
 
 ```sh
 brew tap damionrashford/tap
 brew install --cask --no-quarantine overdrive
 ```
 
-**Download:** grab the DMG from the [latest release](https://github.com/damionrashford/overdrive/releases/latest), drag Overdrive to Applications. On first launch macOS asks you to allow it once in *System Settings › Privacy & Security* because the build is signed but not yet notarized; `--no-quarantine` above skips that step. Details, checksums, permissions and troubleshooting: [docs/install.md](docs/install.md).
+**Download:** grab the DMG from the [latest release](https://github.com/damionrashford/overdrive/releases/latest) and drag Overdrive to Applications. On first launch macOS asks you to allow it once in *System Settings › Privacy & Security*, because the build is signed but not yet notarized by Apple; the two commands above skip that step. Details, checksums, permissions and troubleshooting: [docs/install.md](docs/install.md).
 
 **Build from source:** `brew install xcodegen && scripts/build.sh --install` (Xcode 27). To work in Xcode, `xcodegen generate && open Overdrive.xcodeproj`.
 

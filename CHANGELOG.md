@@ -6,6 +6,9 @@ Add entries under **Unreleased** as you go; `scripts/bump.sh` turns that section
 
 ## [Unreleased]
 
+### Added
+- One-line installer script (`install.sh`) that verifies the release checksum before installing.
+
 ## [1.1.0] - 2026-10-20
 
 ### Added

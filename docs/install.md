@@ -1,8 +1,16 @@
 # Installing Overdrive
 
-Overdrive needs macOS 15 or later on Apple silicon. There are three ways to install the direct edition; the App Store edition will be listed separately when it ships.
+Overdrive needs macOS 15 or later on Apple silicon. There are four ways to install the direct edition; the App Store edition will be listed separately when it ships.
 
-## 1. Homebrew (recommended)
+## 1. One-line installer
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/damionrashford/overdrive/main/install.sh | sh
+```
+
+The script is [in the repository](../install.sh), so read it first if you like. It downloads the latest release zip and its `SHA256SUMS`, refuses to continue if the checksum does not match, copies Overdrive.app to `/Applications` (or `~/Applications` if that is not writable), clears the quarantine flag so macOS does not block the first launch, verifies the code signature and opens the app. It never uses `sudo`. Run it again to update; `sh install.sh --uninstall` removes the app and its preferences. `OVERDRIVE_VERSION=1.1.0` pins a version.
+
+## 2. Homebrew
 
 ```sh
 brew tap damionrashford/tap
@@ -16,7 +24,7 @@ brew upgrade --cask overdrive
 brew uninstall --cask --zap overdrive      # --zap also removes preferences
 ```
 
-## 2. Download
+## 3. Download
 
 1. Get `Overdrive-<version>.dmg` from the [latest release](https://github.com/damionrashford/overdrive/releases/latest).
 2. Open it and drag **Overdrive** onto **Applications**.
@@ -30,7 +38,7 @@ shasum -a 256 ~/Downloads/Overdrive-*.dmg
 
 A zip of the app is also attached for people who prefer it.
 
-## 3. Build from source
+## 4. Build from source
 
 Requires Xcode 27 (or the current stable Xcode) and [xcodegen](https://github.com/yonaskolb/XcodeGen).
 

@@ -1,38 +1,36 @@
 #!/bin/sh
-# Builds Overdrive.app into build/. Pass --install to copy it to /Applications (or ~/Applications).
+# Builds Overdrive.app with Xcode.
+#   scripts/build.sh                 direct edition (Release) into build/Overdrive.app
+#   scripts/build.sh --appstore      App Store edition (sandboxed) into build/Overdrive-AppStore.app
+#   scripts/build.sh --install       build the direct edition and copy it to /Applications (or ~/Applications)
 set -eu
 cd "$(dirname "$0")/.."
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Overdrive"
+CONFIG=Release
+OUT=build/Overdrive.app
+INSTALL=no
+for arg in "$@"; do
+  case "$arg" in
+    --appstore) CONFIG=AppStore; OUT=build/Overdrive-AppStore.app ;;
+    --install) INSTALL=yes ;;
+    *) echo "unknown option $arg" >&2; exit 2 ;;
+  esac
+done
 
-if [ ! -f build/AppIcon.icns ] || [ scripts/make-icon.swift -nt build/AppIcon.icns ]; then
-  mkdir -p build/AppIcon.iconset
-  swift scripts/make-icon.swift build/icon-1024.png
-  for s in 16 32 128 256 512; do
-    sips -z $s $s build/icon-1024.png --out build/AppIcon.iconset/icon_${s}x${s}.png >/dev/null
-    d=$((s * 2))
-    sips -z $d $d build/icon-1024.png --out build/AppIcon.iconset/icon_${s}x${s}@2x.png >/dev/null
-  done
-  iconutil -c icns build/AppIcon.iconset -o build/AppIcon.icns
-fi
+[ -d Overdrive.xcodeproj ] || xcodegen generate
+xcodebuild -project Overdrive.xcodeproj -scheme Overdrive -configuration "$CONFIG" -derivedDataPath build/dd build \
+  | grep -E 'error:|warning: [^M]|BUILD ' || true
+rm -rf "$OUT"
+ditto "build/dd/Build/Products/$CONFIG/Overdrive.app" "$OUT"
+codesign --verify --strict "$OUT"
+echo "built $OUT ($CONFIG)"
 
-APP=build/Overdrive.app
-rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/Overdrive"
-cp Resources/Info.plist "$APP/Contents/Info.plist"
-cp build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-codesign --force --sign - --timestamp=none "$APP"
-codesign --verify --strict "$APP"
-echo "built $APP"
-
-if [ "${1:-}" = "--install" ]; then
+if [ "$INSTALL" = yes ]; then
   DEST=/Applications
   [ -w "$DEST" ] || DEST="$HOME/Applications"
   mkdir -p "$DEST"
   pkill -x Overdrive 2>/dev/null || true
   rm -rf "$DEST/Overdrive.app"
-  ditto "$APP" "$DEST/Overdrive.app"
+  ditto "$OUT" "$DEST/Overdrive.app"
   echo "installed $DEST/Overdrive.app"
 fi

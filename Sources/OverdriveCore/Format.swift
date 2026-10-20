@@ -36,12 +36,24 @@ public enum Fmt {
 }
 
 public enum Paths {
-    /// The folder cleanup and large-file scans work in. `OVERDRIVE_HOME` points it at a scratch
-    /// folder so the clean and trash flows can be exercised end to end without touching real data.
-    public static let home: URL = {
+    /// The folder cleanup, uninstall and large-file scans work in: the person's real home folder,
+    /// or in the App Sandbox the folder they granted. `OVERDRIVE_HOME` points it at a scratch folder
+    /// so the clean and trash flows can be exercised end to end without touching real data.
+    nonisolated(unsafe) public static var home: URL = {
         if let override = ProcessInfo.processInfo.environment["OVERDRIVE_HOME"], !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
-        return FileManager.default.homeDirectoryForCurrentUser
+        return Capabilities.current.realHome
     }()
+
+    public static var isOverridden: Bool { ProcessInfo.processInfo.environment["OVERDRIVE_HOME"] != nil }
+
+    public static func temperature(_ celsius: Double, fahrenheit: Bool = false) -> String {
+        fahrenheit ? String(format: "%.0f°F", celsius * 9 / 5 + 32) : String(format: "%.0f°C", celsius)
+    }
+}
+
+public extension Fmt {
+    static func watts(_ w: Double) -> String { abs(w) >= 10 ? String(format: "%.0f W", w) : String(format: "%.1f W", w) }
+    static func rpm(_ v: Double) -> String { String(format: "%.0f rpm", v) }
 }

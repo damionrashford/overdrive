@@ -10,14 +10,15 @@ struct OverviewPage: View {
         } content: {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
                 MetricTile(page: .cpu, value: store.cpu.total, headline: Fmt.percent(store.cpu.total),
-                           detail: "Load \(String(format: "%.2f", store.cpu.loadAverage[0]))",
-                           series: store.cpuTotal)
+                           detail: store.sensors.average(.cpu).map { "\(store.settings.temperature($0)) · load \(String(format: "%.1f", store.cpu.loadAverage[0]))" }
+                                   ?? "Load \(String(format: "%.2f", store.cpu.loadAverage[0]))",
+                           series: store.cpuTotal.live)
                 MetricTile(page: .memory, value: store.memory.usedFraction, headline: Fmt.percent(store.memory.usedFraction),
                            detail: "\(Fmt.memory(store.memory.used)) of \(Fmt.memory(store.memory.total))",
-                           series: store.memoryUsed)
+                           series: store.memoryUsed.live)
                 MetricTile(page: .gpu, value: store.gpu.device, headline: Fmt.percent(store.gpu.device),
                            detail: store.info.gpuCores.map { "\($0)-core GPU" } ?? store.info.gpuName,
-                           series: store.gpuDevice)
+                           series: store.gpuDevice.live)
                 MetricTile(page: .disk, value: store.rootVolume?.usedFraction ?? 0,
                            headline: Fmt.percent(store.rootVolume?.usedFraction ?? 0),
                            detail: "\(Fmt.storage(store.rootVolume?.available ?? 0)) available",
@@ -32,6 +33,9 @@ struct OverviewPage: View {
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
+            if !store.ai.runtimes.isEmpty {
+                AISummaryCard()
+            }
             HStack(alignment: .top, spacing: 16) {
                 TopProcessesCard(metric: .cpu, limit: 5)
                 TopProcessesCard(metric: .memory, limit: 5)
@@ -50,9 +54,7 @@ private struct MetricTile: View {
     @State private var hovering = false
 
     private var colors: [Color] {
-        if page == .disk, let root = store.rootVolume, root.availableFraction < 0.1 {
-            return [Color(hex: 0xFCA5A5), Color(hex: 0xEF4444)]
-        }
+        if page == .disk, let root = store.rootVolume, root.availableFraction < 0.1 { return Theme.danger }
         return page.accent
     }
 
@@ -66,17 +68,15 @@ private struct MetricTile: View {
                     Image(systemName: "arrow.up.right").font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Theme.tertiary).opacity(hovering ? 1 : 0)
                 }
-                RingGauge(value: value, colors: colors, lineWidth: 10) {
-                    VStack(spacing: 0) {
-                        Text(headline).font(Theme.rounded(22, .bold)).monospacedDigit().foregroundStyle(Theme.text)
-                    }
+                RingGauge(value: value, colors: colors, lineWidth: 10, label: page.title) {
+                    Text(headline).font(Theme.rounded(22, .bold)).monospacedDigit().foregroundStyle(Theme.text)
                 }
                 .frame(width: 112, height: 112)
                 .frame(maxWidth: .infinity)
                 Text(detail).font(.system(size: 11.5)).foregroundStyle(Theme.secondary).lineLimit(1)
                     .frame(maxWidth: .infinity)
                 if let series {
-                    Sparkline(series: series, color: colors[0], height: 30)
+                    Sparkline(series: series, color: colors[0], height: 30, label: "\(page.title) history")
                 } else {
                     SegmentBar(segments: [
                         Segment(id: "used", value: Double(store.rootVolume?.used ?? 0), color: colors[1]),
@@ -87,11 +87,12 @@ private struct MetricTile: View {
             }
             .padding(16)
             .background(CardBackground(highlight: hovering ? colors[0] : nil))
-            .contentShape(RoundedRectangle(cornerRadius: 20))
+            .contentShape(RoundedRectangle(cornerRadius: 18))
         }
         .buttonStyle(.plain)
         .onHover { h in withAnimation(.smooth(duration: 0.2)) { hovering = h } }
         .scaleEffect(hovering ? 1.012 : 1)
+        .accessibilityLabel("\(page.title) \(headline), \(detail). Opens the \(page.title) page.")
     }
 }
 
@@ -104,7 +105,7 @@ private struct HealthCard: View {
             CardHeader(title: "System Health", subtitle: "Live score from CPU, memory, storage and heat",
                        symbol: "heart.text.square", colors: report.colors)
             HStack(alignment: .center, spacing: 22) {
-                RingGauge(value: Double(report.score) / 100, colors: report.colors, lineWidth: 13) {
+                RingGauge(value: Double(report.score) / 100, colors: report.colors, lineWidth: 13, label: "Health score") {
                     VStack(spacing: -2) {
                         Text("\(report.score)").font(Theme.rounded(38, .bold)).monospacedDigit().foregroundStyle(Theme.text)
                         Text(report.label.uppercased()).font(.system(size: 10, weight: .bold)).tracking(1)
@@ -115,8 +116,8 @@ private struct HealthCard: View {
                 VStack(alignment: .leading, spacing: 10) {
                     if report.issues.isEmpty {
                         RecommendationView(rec: Recommendation(
-                            id: "ok", symbol: "checkmark.seal.fill", title: "Everything looks great",
-                            detail: "No bottlenecks right now. Overdrive keeps watching from the menu bar.",
+                            id: "ok", symbol: "checkmark.seal.fill", title: "No bottlenecks right now",
+                            detail: "CPU, memory pressure, storage and temperature are all within normal range.",
                             severity: 0, action: nil, actionLabel: nil))
                         RecommendationView(rec: Recommendation(
                             id: "clean", symbol: "sparkles", title: "Reclaim space anyway",
@@ -150,16 +151,18 @@ private struct QuickActions: View {
                 }
             }
             HStack(spacing: 8) {
-                Button {
-                    if let task = store.maintenance.task("purge") { Task { await store.maintenance.run(task) } }
-                } label: { Label(purge == .running ? "Freeing…" : "Free Memory", systemImage: "bolt.fill") }
-                    .buttonStyle(GlowButtonStyle(colors: Theme.memory, compact: true))
-                    .disabled(purge == .running)
+                if store.capabilities.canRunShell, let task = store.maintenance.task("purge") {
+                    Button {
+                        Task { await store.maintenance.run(task) }
+                    } label: { Label(purge == .running ? "Freeing…" : "Free Memory", systemImage: "bolt.fill") }
+                        .buttonStyle(GlowButtonStyle(colors: Theme.memory, compact: true))
+                        .disabled(purge == .running)
+                }
                 Button { store.page = .cleanup } label: { Label("Clean Junk", systemImage: "sparkles") }
                     .buttonStyle(GlowButtonStyle(colors: Theme.cleanup, compact: true))
                 Button { store.page = .processes } label: { Label("Processes", systemImage: "list.bullet") }
                     .buttonStyle(GhostButtonStyle(compact: true))
-                Button { store.page = .maintenance } label: { Label("Maintenance", systemImage: "wrench.and.screwdriver") }
+                Button { store.page = .apps } label: { Label("Uninstall", systemImage: "trash") }
                     .buttonStyle(GhostButtonStyle(compact: true))
             }
         }
@@ -192,6 +195,7 @@ private struct RecommendationView: View {
                 .buttonStyle(GhostButtonStyle(compact: true))
             }
         }
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -208,35 +212,13 @@ private struct NetworkSummaryCard: View {
                 .padding(.bottom, 10)
                 let top = niceCeiling(max(store.netDown.maxValue, store.netUp.maxValue), minimum: 50_000)
                 LiveChart(series: [
-                    ChartSeries(id: "down", points: store.netDown.points, color: Theme.download),
-                    ChartSeries(id: "up", points: store.netUp.points, color: Theme.upload),
-                ], xDomain: store.netDown.xDomain, yMax: top, height: 52, showAxis: false)
+                    ChartSeries(id: "down", series: store.netDown.live, color: Theme.download),
+                    ChartSeries(id: "up", series: store.netUp.live, color: Theme.upload),
+                ], xDomain: store.netDown.live.xDomain, yMax: top, height: 52, showAxis: false, label: "Network history",
+                          format: { Fmt.rate($0) })
             }
         }
         .buttonStyle(.plain)
-    }
-}
-
-struct RateLabel: View {
-    let symbol: String
-    let color: Color
-    let label: String
-    let value: Double
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbol)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(color)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(color.opacity(0.14)))
-            VStack(alignment: .leading, spacing: 0) {
-                Text(label.uppercased()).font(.system(size: 9.5, weight: .bold)).tracking(0.6).foregroundStyle(Theme.tertiary)
-                Text(Fmt.rate(value)).font(Theme.rounded(17)).monospacedDigit().foregroundStyle(Theme.text)
-            }
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 
@@ -260,7 +242,7 @@ private struct SystemSummaryCard: View {
                         StatTile(label: "Battery Health", value: store.power.health.map { Fmt.percent($0) } ?? "–",
                                  caption: store.power.cycleCount.map { "\($0) cycles" })
                     } else {
-                        StatTile(label: "Power", value: "AC")
+                        StatTile(label: "Power", value: store.sensors.systemPower.map { Fmt.watts($0) } ?? "AC")
                         StatTile(label: "Uptime", value: Fmt.duration(store.info.uptime))
                     }
                     StatTile(label: "Processes", value: "\(store.processes.count)", caption: "yours")
@@ -272,5 +254,34 @@ private struct SystemSummaryCard: View {
     private var batteryCaption: String {
         if let m = store.power.minutesToEmpty { return "\(m / 60)h \(m % 60)m left" }
         return "On battery"
+    }
+}
+
+private struct AISummaryCard: View {
+    @Environment(MonitorStore.self) private var store
+
+    var body: some View {
+        Button { store.page = .ai } label: {
+            Card {
+                HStack(spacing: 16) {
+                    IconBadge(symbol: "brain", colors: Theme.ai, size: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(store.ai.runtimes.map(\.name).joined(separator: ", ") + (store.ai.runtimes.count == 1 ? " is running" : " are running"))
+                            .font(Theme.rounded(14)).foregroundStyle(Theme.text)
+                        Text(store.ai.loaded.isEmpty
+                             ? "No model loaded in memory."
+                             : "\(store.ai.loaded.count) model\(store.ai.loaded.count == 1 ? "" : "s") in memory · \(Fmt.memory(store.ai.loadedBytes))")
+                            .font(.system(size: 12)).foregroundStyle(Theme.secondary)
+                    }
+                    Spacer()
+                    if let headroom = store.ai.headroom {
+                        StatTile(label: "Room for a model", value: Fmt.memory(headroom.availableNow), caption: "of unified memory now")
+                            .frame(width: 180)
+                    }
+                    Image(systemName: "chevron.right").foregroundStyle(Theme.tertiary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }

@@ -10,6 +10,7 @@ public struct SystemSample: Sendable {
     public var power: PowerSnapshot
     public var processes: [ProcessSample]
     public var thermal: ProcessInfo.ThermalState
+    public var sensors: SensorSnapshot
 }
 
 /// Owns the stateful samplers off the main thread; each call returns deltas since the previous call.
@@ -21,8 +22,13 @@ public actor SamplerEngine {
     private let network = NetworkSampler()
     private let power = PowerSampler()
     private let processes = ProcessSampler()
+    private let sensors: SensorSampler?
 
-    public init() {}
+    public init(chip: String) {
+        sensors = Capabilities.current.canReadSensors ? SensorSampler(chip: chip) : nil
+    }
+
+    public var sensorsAvailable: Bool { sensors?.isAvailable ?? false }
 
     public func sample(includeVolumes: Bool) -> SystemSample {
         SystemSample(
@@ -34,7 +40,8 @@ public actor SamplerEngine {
             network: network.sample(),
             power: power.sample(),
             processes: processes.sample(),
-            thermal: ProcessInfo.processInfo.thermalState
+            thermal: ProcessInfo.processInfo.thermalState,
+            sensors: sensors?.sample() ?? SensorSnapshot()
         )
     }
 }

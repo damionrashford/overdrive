@@ -5,13 +5,19 @@ struct CPUPage: View {
     @Environment(MonitorStore.self) private var store
 
     var body: some View {
+        let range = store.settings.chartRange
         PageScaffold(page: .cpu, subtitle: "\(store.info.chip) · \(store.info.coreSummary)") {
-            Pill(text: "Thermal: \(store.thermalLabel)", color: store.thermalColor, symbol: "thermometer.medium")
+            HStack(spacing: 8) {
+                if let t = store.sensors.average(.cpu) {
+                    Pill(text: store.settings.temperature(t), color: Theme.thermal(t), symbol: "thermometer.medium")
+                }
+                Pill(text: "Thermal: \(store.thermalLabel)", color: store.thermalColor, symbol: "flame")
+            }
         } content: {
             HStack(alignment: .top, spacing: 16) {
                 Card {
                     CardHeader(title: "Utilization", symbol: "gauge.with.dots.needle.67percent", colors: Theme.cpu)
-                    RingGauge(value: store.cpu.total, colors: Theme.cpu, lineWidth: 14) {
+                    RingGauge(value: store.cpu.total, colors: Theme.cpu, lineWidth: 14, label: "CPU utilization") {
                         VStack(spacing: 0) {
                             BigNumber(value: String(format: "%.0f", store.cpu.total * 100), unit: "%", size: 40)
                             Text("all cores").font(.system(size: 11)).foregroundStyle(Theme.tertiary)
@@ -29,17 +35,14 @@ struct CPUPage: View {
                 .frame(width: 290)
 
                 Card {
-                    CardHeader(title: "History", subtitle: "Last \(Int(Double(store.cpuTotal.capacity) * store.refreshInterval / 60)) minutes",
-                               symbol: "waveform.path.ecg", colors: Theme.cpu) {
-                        HStack(spacing: 14) {
-                            LegendChip(color: Theme.cpu[0], label: "Total")
-                            LegendChip(color: Theme.cpu[1], label: "System")
-                        }
+                    HistoryHeader(title: "History", colors: Theme.cpu) {
+                        LegendChip(color: Theme.cpu[0], label: "Total")
+                        LegendChip(color: Theme.cpu[1], label: "System")
                     }
                     LiveChart(series: [
-                        ChartSeries(id: "total", points: store.cpuTotal.points, color: Theme.cpu[0]),
-                        ChartSeries(id: "system", points: store.cpuSystem.points, color: Theme.cpu[1]),
-                    ], xDomain: store.cpuTotal.xDomain, yMax: 100, height: 200)
+                        ChartSeries(id: "Total", series: store.cpuTotal[range], color: Theme.cpu[0]),
+                        ChartSeries(id: "System", series: store.cpuSystem[range], color: Theme.cpu[1]),
+                    ], xDomain: store.cpuTotal[range].xDomain, yMax: 100, height: 200, label: "CPU history")
                     Divider().overlay(Theme.hairline).padding(.vertical, 14)
                     HStack(alignment: .top) {
                         StatTile(label: "Load 1 min", value: String(format: "%.2f", store.cpu.loadAverage[0]))
@@ -97,7 +100,7 @@ private struct CoreTile: View {
                 Spacer()
                 Text(String(format: "%.0f%%", value * 100)).font(Theme.rounded(13)).monospacedDigit().foregroundStyle(Theme.text)
             }
-            Sparkline(series: series, color: color, height: 26)
+            Sparkline(series: series, color: color, height: 26, label: "Core \(index + 1) history")
         }
         .padding(10)
         .background(
@@ -105,5 +108,7 @@ private struct CoreTile: View {
                 .fill(color.opacity(0.04 + value * 0.12))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(color.opacity(0.12 + value * 0.3), lineWidth: 0.8))
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Core \(index + 1), \(Int(value * 100)) percent")
     }
 }

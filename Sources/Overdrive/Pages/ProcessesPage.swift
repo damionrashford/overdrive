@@ -9,13 +9,14 @@ struct ProcessesPage: View {
     @State private var ascending = false
     @State private var selection: String?
 
-    enum SortKey { case name, cpu, memory, threads, count }
+    enum SortKey { case name, cpu, memory, disk, threads, count }
 
     var body: some View {
         let rows = sortedRows
         let selected = rows.first { $0.id == selection }
+        let disk = store.capabilities.hasProcessDiskIO
         PageScaffold(page: .processes,
-                     subtitle: "\(store.processes.count) processes you own · \(Fmt.memory(store.processes.reduce(0) { $0 + $1.memory })) footprint",
+                     subtitle: "\(store.processes.count) processes you own · \(Fmt.memory(store.processes.reduce(0) { $0 + $1.memory })) \(store.capabilities.isSandboxed ? "resident" : "footprint")",
                      scrolls: false) {
             HStack(spacing: 10) {
                 SearchField(text: $query, prompt: "Filter by name")
@@ -23,32 +24,14 @@ struct ProcessesPage: View {
             }
         } content: {
             Card(padding: 0) {
-                HStack(spacing: 10) {
-                    if let selected {
-                        (store.icon(for: selected.iconPath)).resizable().frame(width: 20, height: 20)
-                        Text(selected.name).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-                        Text(selected.count > 1 ? "\(selected.count) processes" : "PID \(selected.pids.first.map(String.init) ?? "")")
-                            .font(.system(size: 11.5)).foregroundStyle(Theme.tertiary)
-                    } else {
-                        Text("Select a row to quit it").font(.system(size: 12)).foregroundStyle(Theme.tertiary)
-                    }
-                    Spacer()
-                    Button("Quit") { if let selected { store.requestQuit(selected) } }
-                        .buttonStyle(GhostButtonStyle(compact: true))
-                        .disabled(selected == nil)
-                    Button("Force Quit") { if let selected { store.requestQuit(selected, force: true) } }
-                        .buttonStyle(GlowButtonStyle(colors: [Color(hex: 0xFB7185), Color(hex: 0xE11D48)], compact: true))
-                        .disabled(selected == nil)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                DetailBar(row: selected)
                 Divider().overlay(Theme.hairline)
-                header
+                header(disk: disk)
                 Divider().overlay(Theme.hairline)
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(rows) { row in
-                            ProcessTableRow(row: row, grouped: grouped, selected: row.id == selection,
+                            ProcessTableRow(row: row, grouped: grouped, selected: row.id == selection, disk: disk,
                                             maxCPU: max(100, rows.map(\.cpu).max() ?? 0))
                                 .onTapGesture { selection = row.id == selection ? nil : row.id }
                         }
@@ -60,19 +43,24 @@ struct ProcessesPage: View {
                 }
                 .frame(maxHeight: .infinity)
             }
-            Text("Processes owned by other users (root, WindowServer) need administrator rights to inspect and are not listed. They still count toward the CPU and memory totals.")
+            Text(store.capabilities.isSandboxed
+                 ? "Processes owned by other users are not listed, and the App Store edition cannot quit other apps; use the app’s own Quit command. The direct edition adds Quit and a disk I/O column."
+                 : "Processes owned by other users (root, WindowServer) need administrator rights to inspect and are not listed. They still count toward the CPU and memory totals.")
                 .font(.system(size: 11)).foregroundStyle(Theme.tertiary)
         }
     }
 
-    private var header: some View {
+    private func header(disk: Bool) -> some View {
         HStack(spacing: 0) {
             sortButton("Name", .name).frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 46)
             sortButton("CPU", .cpu).frame(width: 150, alignment: .trailing)
-            sortButton("Memory", .memory).frame(width: 110, alignment: .trailing)
-            sortButton("Threads", .threads).frame(width: 80, alignment: .trailing)
-            sortButton(grouped ? "Procs" : "PID", .count).frame(width: 70, alignment: .trailing)
-            Spacer().frame(width: 52)
+            sortButton("Memory", .memory).frame(width: 100, alignment: .trailing)
+            if disk {
+                sortButton("Disk I/O", .disk).frame(width: 110, alignment: .trailing)
+            }
+            sortButton("Threads", .threads).frame(width: 76, alignment: .trailing)
+            sortButton(grouped ? "Procs" : "PID", .count).frame(width: 66, alignment: .trailing)
+            Spacer().frame(width: store.capabilities.canQuitProcesses ? 52 : 16)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 9)
@@ -92,6 +80,7 @@ struct ProcessesPage: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Sort by \(title)")
     }
 
     private var sortedRows: [ProcessRow] {
@@ -103,6 +92,7 @@ struct ProcessesPage: View {
             case .name: order = a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
             case .cpu: order = a.cpu == b.cpu ? a.memory < b.memory : a.cpu < b.cpu
             case .memory: order = a.memory < b.memory
+            case .disk: order = a.diskRead + a.diskWrite < b.diskRead + b.diskWrite
             case .threads: order = a.threads < b.threads
             case .count: order = grouped ? a.count < b.count : (a.pids.first ?? 0) < (b.pids.first ?? 0)
             }
@@ -112,51 +102,117 @@ struct ProcessesPage: View {
     }
 }
 
+/// What is selected, with the facts a person wants before quitting something.
+private struct DetailBar: View {
+    @Environment(MonitorStore.self) private var store
+    let row: ProcessRow?
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if let row {
+                store.icon(for: row.iconPath).resizable().frame(width: 22, height: 22)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 8) {
+                        Text(row.name).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
+                        if let sample = sample(for: row) {
+                            Text("PID \(sample.pid)\(sample.parent > 0 ? " · parent \(parentName(sample.parent))" : "") · started \(sample.startTime.formatted(.relative(presentation: .named))) · CPU time \(Fmt.duration(sample.cpuTimeSeconds))")
+                                .font(.system(size: 11)).foregroundStyle(Theme.tertiary).lineLimit(1)
+                        } else if row.count > 1 {
+                            Text("\(row.count) processes").font(.system(size: 11)).foregroundStyle(Theme.tertiary)
+                        }
+                    }
+                    if let path = path(for: row) {
+                        Text(abbreviated(path)).font(.system(size: 11)).foregroundStyle(Theme.tertiary).lineLimit(1).truncationMode(.middle)
+                            .textSelection(.enabled)
+                    }
+                }
+                Spacer()
+                if let path = path(for: row) {
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: row.bundlePath ?? path)]) }
+                        .buttonStyle(GhostButtonStyle(compact: true))
+                }
+                if store.capabilities.canQuitProcesses {
+                    Button("Quit") { store.requestQuit(row) }.buttonStyle(GhostButtonStyle(compact: true))
+                    Button("Force Quit") { store.requestQuit(row, force: true) }
+                        .buttonStyle(GlowButtonStyle(colors: Theme.danger, compact: true))
+                }
+            } else {
+                Text("Select a row for details").font(.system(size: 12)).foregroundStyle(Theme.tertiary)
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(height: 54)
+    }
+
+    private func sample(for row: ProcessRow) -> ProcessSample? {
+        guard row.count == 1, let pid = row.pids.first else { return nil }
+        return store.processes.first { $0.pid == pid }
+    }
+
+    private func path(for row: ProcessRow) -> String? {
+        if let bundle = row.bundlePath { return bundle }
+        return sample(for: row)?.path.nonEmpty ?? row.iconPath.nonEmpty
+    }
+
+    private func parentName(_ pid: pid_t) -> String {
+        store.processes.first { $0.pid == pid }?.name ?? (pid == 1 ? "launchd" : "\(pid)")
+    }
+}
+
+private extension String {
+    var nonEmpty: String? { isEmpty ? nil : self }
+}
+
 private struct ProcessTableRow: View {
     @Environment(MonitorStore.self) private var store
     let row: ProcessRow
     let grouped: Bool
     let selected: Bool
+    let disk: Bool
     let maxCPU: Double
-    @State private var hovering = false
 
     var body: some View {
-        HStack(spacing: 0) {
-            HStack(spacing: 10) {
-                (store.icon(for: row.iconPath)).resizable().interpolation(.high).frame(width: 20, height: 20)
-                Text(row.name).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 8) {
-                GeometryReader { geo in
-                    Capsule().fill(Theme.track).overlay(alignment: .leading) {
-                        Capsule().fill(LinearGradient(colors: Theme.cpu, startPoint: .leading, endPoint: .trailing))
-                            .frame(width: max(2, geo.size.width * CGFloat(min(1, row.cpu / maxCPU))))
-                    }
+        HoverRow(selected: selected, accent: Theme.processes[1]) { hovering in
+            HStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    store.icon(for: row.iconPath).resizable().interpolation(.high).frame(width: 20, height: 20)
+                    Text(row.name).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
                 }
-                .frame(width: 60, height: 4)
-                Text(String(format: "%.1f%%", row.cpu)).frame(width: 56, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 8) {
+                    GeometryReader { geo in
+                        Capsule().fill(Theme.track).overlay(alignment: .leading) {
+                            Capsule().fill(LinearGradient(colors: Theme.cpu, startPoint: .leading, endPoint: .trailing))
+                                .frame(width: max(2, geo.size.width * CGFloat(min(1, row.cpu / maxCPU))))
+                        }
+                    }
+                    .frame(width: 60, height: 4)
+                    Text(String(format: "%.1f%%", row.cpu)).frame(width: 56, alignment: .trailing)
+                }
+                .frame(width: 150, alignment: .trailing)
+                Text(Fmt.memory(row.memory)).frame(width: 100, alignment: .trailing)
+                if disk {
+                    Text(row.diskRead + row.diskWrite > 1000 ? Fmt.rate(row.diskRead + row.diskWrite) : "–").frame(width: 110, alignment: .trailing).foregroundStyle(Theme.secondary)
+                }
+                Text("\(row.threads)").frame(width: 76, alignment: .trailing).foregroundStyle(Theme.secondary)
+                Text(grouped ? "\(row.count)" : "\(row.pids.first ?? 0)").frame(width: 66, alignment: .trailing).foregroundStyle(Theme.tertiary)
+                if store.capabilities.canQuitProcesses {
+                    HStack {
+                        IconButton(symbol: "xmark", tint: Theme.tertiary, help: "Quit \(row.name)") { store.requestQuit(row) }
+                    }
+                    .frame(width: 52, alignment: .trailing)
+                    .opacity(hovering || selected ? 1 : 0)
+                } else {
+                    Spacer().frame(width: 16)
+                }
             }
-            .frame(width: 150, alignment: .trailing)
-            Text(Fmt.memory(row.memory)).frame(width: 110, alignment: .trailing)
-            Text("\(row.threads)").frame(width: 80, alignment: .trailing).foregroundStyle(Theme.secondary)
-            Text(grouped ? "\(row.count)" : "\(row.pids.first ?? 0)").frame(width: 70, alignment: .trailing).foregroundStyle(Theme.tertiary)
-            HStack {
-                IconButton(symbol: "xmark", tint: Theme.tertiary, help: "Quit \(row.name)") { store.requestQuit(row) }
-            }
-            .frame(width: 52, alignment: .trailing)
-            .opacity(hovering || selected ? 1 : 0)
+            .font(.system(size: 12, weight: .medium).monospacedDigit())
+            .foregroundStyle(Theme.text)
         }
-        .font(.system(size: 12, weight: .medium).monospacedDigit())
-        .foregroundStyle(Theme.text)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(selected ? Theme.processes[1].opacity(0.16) : (hovering ? Color.white.opacity(0.04) : .clear))
-                .padding(.horizontal, 6)
-        )
-        .contentShape(Rectangle())
-        .onHover { hovering = $0 }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(row.name), \(String(format: "%.0f", row.cpu)) percent CPU, \(Fmt.memory(row.memory))")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

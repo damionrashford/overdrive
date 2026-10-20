@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(MonitorStore.self) private var store
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         @Bindable var store = store
@@ -18,6 +19,12 @@ struct RootView: View {
         }
         .background(Theme.background)
         .ignoresSafeArea()
+        .onAppear {
+            // Screenshot flag: the Settings scene can only be opened through the environment action.
+            if let i = CommandLine.arguments.firstIndex(of: "--show"), CommandLine.arguments.dropFirst(i + 1).first == "settings" {
+                openSettings()
+            }
+        }
         .confirmationDialog(quitTitle, isPresented: Binding(get: { store.pendingQuit != nil },
                                                             set: { if !$0 { store.pendingQuit = nil } })) {
             if let pending = store.pendingQuit {
@@ -56,10 +63,13 @@ struct RootView: View {
         case .gpu: GPUPage()
         case .disk: DiskPage()
         case .network: NetworkPage()
+        case .battery: BatteryPage()
+        case .sensors: SensorsPage()
         case .processes: ProcessesPage()
+        case .ai: AIPage()
         case .cleanup: CleanupPage()
+        case .apps: AppsPage()
         case .maintenance: MaintenancePage()
-        case .settings: SettingsPage()
         }
     }
 }
@@ -67,29 +77,52 @@ struct RootView: View {
 private struct Sidebar: View {
     @Environment(MonitorStore.self) private var store
 
+    private var monitorPages: [Page] {
+        Page.monitor.filter { page in
+            switch page {
+            case .battery: store.power.hasBattery || store.sampleCount == 0
+            case .sensors: store.sensorsAvailable
+            default: true
+            }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 10) {
                 LogoMark(size: 34)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Overdrive").font(Theme.rounded(17, .bold)).foregroundStyle(Theme.text)
-                    Text("System studio").font(.system(size: 11)).foregroundStyle(Theme.tertiary)
+                    Text(store.capabilities.isSandboxed ? "App Store edition" : "Direct edition")
+                        .font(.system(size: 11)).foregroundStyle(Theme.tertiary)
                 }
             }
             .padding(.top, 50)
             .padding(.horizontal, 8)
             .padding(.bottom, 22)
+            .accessibilityElement(children: .combine)
 
             SectionLabel(text: "Monitor")
-            ForEach(Page.monitor) { SidebarItem(page: $0, value: value(for: $0)) }
+            ForEach(monitorPages) { SidebarItem(page: $0, value: value(for: $0)) }
             SectionLabel(text: "Optimize").padding(.top, 14)
             ForEach(Page.optimize) { SidebarItem(page: $0, value: value(for: $0)) }
 
             Spacer()
             HealthMini()
                 .padding(.bottom, 8)
-            SidebarItem(page: .settings, value: nil)
-                .padding(.bottom, 16)
+            SettingsLink {
+                HStack(spacing: 10) {
+                    Image(systemName: "gearshape").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.secondary).frame(width: 20)
+                    Text("Settings").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.secondary)
+                    Spacer()
+                    Text("⌘,").font(.system(size: 11)).foregroundStyle(Theme.tertiary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 16)
         }
         .padding(.horizontal, 12)
         .frame(width: 228)
@@ -111,9 +144,12 @@ private struct Sidebar: View {
         case .gpu: Fmt.percent(store.gpu.device)
         case .disk: store.rootVolume.map { Fmt.storage($0.available) }
         case .network: Fmt.rate(store.network.downPerSec)
+        case .battery: store.power.hasBattery ? Fmt.percent(store.power.percent) : nil
+        case .sensors: store.sensors.average(.cpu).map { store.settings.temperature($0) }
         case .processes: "\(store.processes.count)"
+        case .ai: store.ai.loaded.isEmpty ? (store.ai.runtimes.isEmpty ? nil : "\(store.ai.runtimes.count)") : Fmt.memory(store.ai.loadedBytes)
         case .cleanup: store.cleanup.phase == .ready ? Fmt.storage(store.cleanup.selectedSize) : nil
-        case .maintenance, .settings: nil
+        case .apps, .maintenance: nil
         }
     }
 }
@@ -128,6 +164,7 @@ private struct SectionLabel: View {
             .foregroundStyle(Theme.tertiary)
             .padding(.horizontal, 10)
             .padding(.bottom, 4)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -166,16 +203,17 @@ private struct SidebarItem: View {
                                              startPoint: .leading, endPoint: .trailing))
                         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .strokeBorder(page.accent[0].opacity(0.3), lineWidth: 0.8))
-                        .shadow(color: page.accent[1].opacity(0.25), radius: 10)
                 } else if hovering {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.045))
+                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.fill)
                 }
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .animation(.snappy(duration: 0.2), value: selected)
+        .accessibilityLabel(page.title)
+        .accessibilityValue(value ?? "")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -186,7 +224,7 @@ private struct HealthMini: View {
         let report = store.health
         Button { store.page = .overview } label: {
             HStack(spacing: 11) {
-                RingGauge(value: Double(report.score) / 100, colors: report.colors, lineWidth: 5) {
+                RingGauge(value: Double(report.score) / 100, colors: report.colors, lineWidth: 5, label: "Health score") {
                     Text("\(report.score)").font(Theme.rounded(12, .bold)).monospacedDigit().foregroundStyle(Theme.text)
                 }
                 .frame(width: 42, height: 42)
@@ -202,6 +240,7 @@ private struct HealthMini: View {
             .background(CardBackground(cornerRadius: 14))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Health \(report.score), \(report.label)")
     }
 }
 
@@ -221,9 +260,9 @@ struct LogoMark: View {
                             style: StrokeStyle(lineWidth: size * 0.075, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .frame(width: size * ring.1, height: size * ring.1)
-                    .shadow(color: ring.0[1].opacity(0.6), radius: size * 0.08)
             }
         }
         .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 }

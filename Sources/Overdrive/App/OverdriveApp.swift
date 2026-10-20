@@ -12,13 +12,16 @@ struct OverdriveApp: App {
             Diagnostics.dump()
             exit(0)
         }
+        if CommandLine.arguments.contains("--dump-net") {
+            Diagnostics.dumpNetwork()
+            exit(0)
+        }
     }
 
     var body: some Scene {
         Window("Overdrive", id: "main") {
             RootView()
                 .environment(store)
-                .preferredColorScheme(.dark)
                 .frame(minWidth: 1120, minHeight: 740)
                 .task { LaunchOptions.apply(to: store) }
         }
@@ -27,15 +30,34 @@ struct OverdriveApp: App {
         .defaultSize(width: 1300, height: 860)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(replacing: .appInfo) {
+                Button("About Overdrive") { AboutWindow.show(store: store) }
+            }
+            CommandGroup(after: .appInfo) {
+                Button("Welcome to Overdrive") { WelcomeWindow.show(store: store) }
+            }
             CommandMenu("Go") {
                 ForEach(Array((Page.monitor + Page.optimize).enumerated()), id: \.element) { index, page in
-                    Button(page.title) { store.page = page }
-                        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                    if index < 9 {
+                        Button(page.title) { store.page = page }
+                            .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                    } else {
+                        Button(page.title) { store.page = page }
+                    }
                 }
             }
-            CommandGroup(replacing: .appSettings) {
-                Button("Settings…") { store.page = .settings }.keyboardShortcut(",", modifiers: .command)
+            CommandGroup(replacing: .help) {
+                Button("Copy System Report") { Report.copy(store: store) }.keyboardShortcut("r", modifiers: [.command, .shift])
+                Button("Save System Report…") { Report.save(store: store) }
+                Divider()
+                Link("Overdrive on GitHub", destination: Links.repository)
+                Link("Privacy Policy", destination: Links.privacy)
+                Link("Report a Problem", destination: Links.issues)
             }
+        }
+
+        Settings {
+            SettingsView().environment(store)
         }
 
         MenuBarExtra {
@@ -47,17 +69,33 @@ struct OverdriveApp: App {
     }
 }
 
+enum Links {
+    static let repository = URL(string: "https://github.com/damionrashford/overdrive")!
+    static let privacy = URL(string: "https://github.com/damionrashford/overdrive/blob/main/docs/privacy-policy.md")!
+    static let issues = URL(string: "https://github.com/damionrashford/overdrive/issues")!
+    static let license = URL(string: "https://github.com/damionrashford/overdrive/blob/main/LICENSE")!
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.appearance = NSAppearance(named: .darkAqua)
-        MainActor.assumeIsolated { MonitorStore.shared.start() }
+        MainActor.assumeIsolated {
+            let store = MonitorStore.shared
+            store.start()
+            let scripted = CommandLine.arguments.contains { $0.hasPrefix("--") }
+            if !store.settings.hasSeenWelcome, !scripted {
+                WelcomeWindow.show(store: store)
+            }
+        }
     }
 
     /// Closing the window leaves Overdrive running in the menu bar.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 }
 
-/// Hidden flags for screenshots and smoke tests: `--page cpu`, `--scan`, `--large-root <dir>`.
+/// Hidden flags for screenshots and smoke tests: `--page cpu`, `--scan`, `--large-root <dir>`,
+/// `--appearance light|dark`, `--window 1440x900`, `--show welcome|about|settings`, `--e2e`, `--render-menubar <png>`.
 enum LaunchOptions {
     @MainActor static func apply(to store: MonitorStore) {
         let args = CommandLine.arguments
@@ -66,7 +104,29 @@ enum LaunchOptions {
             return args[i + 1]
         }
         if let raw = value(after: "--page"), let page = Page(rawValue: raw) { store.page = page }
-        if args.contains("--scan") { Task { await store.cleanup.scan() } }
+        if let appearance = value(after: "--appearance") {
+            NSApp.appearance = NSAppearance(named: appearance == "light" ? .aqua : .darkAqua)
+        }
+        if let size = value(after: "--window") {
+            let parts = size.split(separator: "x").compactMap { Double($0) }
+            // State restoration re-applies the saved frame shortly after launch; resize once it has settled.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(700))
+                guard parts.count == 2, let window = NSApp.windows.first(where: { $0.title == "Overdrive" }) else { return }
+                window.setContentSize(NSSize(width: parts[0], height: parts[1]))
+                window.center()
+            }
+        }
+        switch value(after: "--show") {
+        case "welcome": WelcomeWindow.show(store: store)
+        case "about": AboutWindow.show(store: store)
+        default: break
+        }
+        if args.contains("--scan") { Task { await store.cleanup.scan(exclusions: store.settings.cleanupExclusions) } }
+        if let root = value(after: "--large-root") {
+            if let mb = value(after: "--threshold-mb").flatMap(UInt64.init) { store.largeFiles.threshold = mb * 1_000_000 }
+            store.largeFiles.scan(root: URL(fileURLWithPath: root))
+        }
         if args.contains("--e2e") { Task { await SelfTest.run(store) } }
         if let out = value(after: "--render-menubar") {
             Task {
@@ -80,40 +140,20 @@ enum LaunchOptions {
                 exit(0)
             }
         }
-        if let root = value(after: "--large-root") {
-            if let mb = value(after: "--threshold-mb").flatMap(UInt64.init) { store.largeFiles.threshold = mb * 1_000_000 }
-            store.largeFiles.scan(root: URL(fileURLWithPath: root))
-        }
     }
 }
 
-enum Diagnostics {
-    /// Prints two samples one second apart, to compare against vm_stat, top, iostat and netstat.
-    static func dump() {
-        let info = SystemInfo.current()
-        let cpu = CPUSampler(), memory = MemorySampler(), gpu = GPUSampler(), disk = DiskSampler()
-        let network = NetworkSampler(), processes = ProcessSampler(), power = PowerSampler()
-        _ = (memory.sample(), disk.sampleIO(), network.sample(), processes.sample())
-        Thread.sleep(forTimeInterval: 1)
-        let c = cpu.sample(), m = memory.sample(), g = gpu.sample(), d = disk.sampleIO(), n = network.sample()
-        let p = processes.sample().sorted { $0.cpu > $1.cpu }, b = power.sample()
-        print("model      \(info.modelName) (\(info.modelIdentifier)) · \(info.chip) · \(info.osVersion) \(info.osBuild)")
-        print("clusters   \(info.clusters.map { "\($0.name)=\($0.cores)" }.joined(separator: " "))")
-        print("gpu        \(info.gpuName) cores=\(info.gpuCores ?? 0) workingSet=\(Fmt.memory(info.gpuWorkingSet))")
-        print("cpu        total=\(Fmt.percent(c.total, decimals: 1)) user=\(Fmt.percent(c.user, decimals: 1)) sys=\(Fmt.percent(c.system, decimals: 1)) load=\(c.loadAverage.map { String(format: "%.2f", $0) })")
-        print("cores      \(c.cores.map { String(format: "%.0f", $0 * 100) }.joined(separator: " "))")
-        print("memory     used=\(Fmt.memory(m.used)) app=\(Fmt.memory(m.app)) wired=\(Fmt.memory(m.wired)) compressed=\(Fmt.memory(m.compressed)) cached=\(Fmt.memory(m.cached)) free=\(Fmt.memory(m.free)) swap=\(Fmt.memory(m.swapUsed))/\(Fmt.memory(m.swapTotal)) pressure=\(m.pressure.label) \(Fmt.percent(m.pressureFraction))")
-        print("gpu        device=\(Fmt.percent(g.device)) renderer=\(Fmt.percent(g.renderer)) tiler=\(Fmt.percent(g.tiler)) inUse=\(Fmt.memory(g.inUseMemory))")
-        print("disk io    read=\(Fmt.rate(d.readPerSec)) write=\(Fmt.rate(d.writePerSec)) totalRead=\(Fmt.storage(d.totalRead)) totalWritten=\(Fmt.storage(d.totalWritten))")
-        for v in DiskSampler.volumes() {
-            print("volume     \(v.name) \(v.path) total=\(Fmt.storage(v.total)) available=\(Fmt.storage(v.available)) free=\(Fmt.storage(v.free)) purgeable=\(Fmt.storage(v.purgeable))")
-        }
-        print("network    down=\(Fmt.rate(n.downPerSec)) up=\(Fmt.rate(n.upPerSec)) totalDown=\(Fmt.storage(n.totalDown)) totalUp=\(Fmt.storage(n.totalUp))")
-        for i in n.interfaces { print("interface  \(i.bsdName) \(i.displayName) \(i.ipv4 ?? "-")") }
-        print("battery    has=\(b.hasBattery) \(Fmt.percent(b.percent)) charging=\(b.isCharging) ac=\(b.onAC) health=\(b.health.map { Fmt.percent($0) } ?? "-") cycles=\(b.cycleCount ?? 0)")
-        print("processes  \(p.count) visible")
-        for s in p.prefix(8) {
-            print(String(format: "  %6d %6.1f%% %10@  %@", s.pid, s.cpu, Fmt.memory(s.memory), s.name))
-        }
+enum Report {
+    @MainActor static func copy(store: MonitorStore) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(store.report(), forType: .string)
+    }
+
+    @MainActor static func save(store: MonitorStore) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "Overdrive Report.txt"
+        panel.allowedContentTypes = [.plainText]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        try? store.report().write(to: url, atomically: true, encoding: .utf8)
     }
 }

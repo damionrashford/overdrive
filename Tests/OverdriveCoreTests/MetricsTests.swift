@@ -91,7 +91,7 @@ import Testing
     }
 
     @Test func engineProducesASample() async {
-        let engine = SamplerEngine()
+        let engine = SamplerEngine(chip: "Apple M5 Pro")
         let sample = await engine.sample(includeVolumes: true)
         #expect(sample.volumes?.isEmpty == false)
         #expect(sample.memory.total > 0)

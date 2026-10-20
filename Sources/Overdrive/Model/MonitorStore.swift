@@ -5,39 +5,6 @@ import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ChartPoint: Identifiable, Hashable {
-    let id: Int
-    let value: Double
-}
-
-/// Fixed-length history; ids keep increasing so charts slide instead of redrawing from zero.
-struct Series {
-    let capacity: Int
-    private(set) var points: [ChartPoint] = []
-    private var next = 0
-
-    init(capacity: Int = 90) { self.capacity = capacity }
-
-    mutating func append(_ value: Double) {
-        points.append(ChartPoint(id: next, value: value.isFinite ? value : 0))
-        next += 1
-        if points.count > capacity { points.removeFirst(points.count - capacity) }
-    }
-
-    var last: Double { points.last?.value ?? 0 }
-    var maxValue: Double { points.map(\.value).max() ?? 0 }
-
-    func average(last n: Int) -> Double {
-        let slice = points.suffix(n)
-        return slice.isEmpty ? 0 : slice.map(\.value).reduce(0, +) / Double(slice.count)
-    }
-
-    var xDomain: ClosedRange<Int> {
-        let hi = next - 1
-        return (hi - capacity + 1)...hi
-    }
-}
-
 struct ProcessRow: Identifiable, Hashable {
     let id: String
     let name: String
@@ -47,6 +14,10 @@ struct ProcessRow: Identifiable, Hashable {
     let cpu: Double
     let memory: UInt64
     let threads: Int
+    let diskRead: Double
+    let diskWrite: Double
+    /// False in the App Store edition, where only names are available.
+    let hasMetrics: Bool
 
     var count: Int { pids.count }
 }
@@ -87,26 +58,23 @@ struct HealthReport {
 }
 
 enum CleanupTab { case junk, large }
-
-enum MenuBarStyle: String, CaseIterable, Identifiable {
-    case icon, cpu, cpuMemory
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .icon: "Icon only"
-        case .cpu: "CPU"
-        case .cpuMemory: "CPU + Memory"
-        }
-    }
-}
+enum StorageTab { case volumes, explorer }
+enum AppsTab { case installed, startup }
 
 @MainActor @Observable
 final class MonitorStore {
     static let shared = MonitorStore()
 
-    let info = SystemInfo.current()
+    let info: SystemInfo
+    let capabilities = Capabilities.current
+    let settings = AppSettings()
+    let access = AccessManager()
+    let alerts = AlertCenter()
+
     var page: Page = .overview
     var cleanupTab: CleanupTab = .junk
+    var storageTab: StorageTab = .volumes
+    var appsTab: AppsTab = .installed
 
     var cpu = CPUSnapshot()
     var memory = MemorySnapshot()
@@ -117,52 +85,67 @@ final class MonitorStore {
     var power = PowerSnapshot()
     var processes: [ProcessSample] = []
     var thermal: ProcessInfo.ThermalState = .nominal
+    var sensors = SensorSnapshot()
     var sampleCount = 0
+    var sensorsAvailable = false
+    /// Overdrive's own cost, shown in Settings so the person can judge it.
+    var selfCPU: Double = 0
+    var selfMemory: UInt64 = 0
 
-    var cpuTotal = Series()
-    var cpuSystem = Series()
+    var cpuTotal = History()
+    var cpuSystem = History()
     var perCore: [Series] = []
-    var memoryUsed = Series()
-    var memoryPressure = Series()
-    var gpuDevice = Series()
-    var gpuRenderer = Series()
-    var gpuTiler = Series()
-    var diskRead = Series()
-    var diskWrite = Series()
-    var netDown = Series()
-    var netUp = Series()
+    var memoryUsed = History()
+    var memoryPressure = History()
+    var gpuDevice = History()
+    var gpuRenderer = History()
+    var gpuTiler = History()
+    var diskRead = History()
+    var diskWrite = History()
+    var netDown = History()
+    var netUp = History()
+    var cpuTemperature = History()
+    var gpuTemperature = History()
+    var fanSpeed = History()
+    var systemPower = History()
+    var batteryLevel = History()
+    var batteryPower = History()
 
     /// Processes waiting on the confirmation dialog in RootView.
     var pendingQuit: (row: ProcessRow, force: Bool)?
 
-    var refreshInterval: Double = UserDefaults.standard.object(forKey: "refreshInterval") as? Double ?? 2 {
-        didSet { UserDefaults.standard.set(refreshInterval, forKey: "refreshInterval") }
-    }
-
-    var menuBarStyle: MenuBarStyle = MenuBarStyle(rawValue: UserDefaults.standard.string(forKey: "menuBarStyle") ?? "") ?? .cpuMemory {
-        didSet { UserDefaults.standard.set(menuBarStyle.rawValue, forKey: "menuBarStyle") }
-    }
-
     let maintenance = MaintenanceModel()
     let cleanup = CleanupModel()
     let largeFiles = LargeFilesModel()
+    let space = SpaceModel()
+    let apps = AppsModel()
+    let ai = AIModel()
 
-    @ObservationIgnored private let engine = SamplerEngine()
+    @ObservationIgnored private let engine: SamplerEngine
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var appNames: [pid_t: String] = [:]
     @ObservationIgnored private var bundleNames: [String: String] = [:]
     @ObservationIgnored private var icons: [String: Image] = [:]
+    @ObservationIgnored private var lastSelf: (cpu: Double, time: Double)?
+
+    private init() {
+        let info = SystemInfo.current()
+        self.info = info
+        engine = SamplerEngine(chip: info.chip)
+    }
 
     func start() {
         guard loop == nil else { return }
+        alerts.refreshAuthorization()
         loop = Task { [weak self] in
+            guard let self else { return }
+            sensorsAvailable = await engine.sensorsAvailable
             // A quick second sample so CPU and per-process deltas are meaningful right away.
-            await self?.tick(includeVolumes: true)
+            await tick(includeVolumes: true)
             try? await Task.sleep(for: .milliseconds(600))
             while !Task.isCancelled {
-                guard let self else { return }
-                await self.tick(includeVolumes: self.sampleCount % 5 == 1)
-                try? await Task.sleep(for: .seconds(self.refreshInterval))
+                await tick(includeVolumes: sampleCount % 5 == 1)
+                try? await Task.sleep(for: .seconds(settings.refreshInterval))
             }
         }
     }
@@ -176,24 +159,48 @@ final class MonitorStore {
         network = s.network
         power = s.power
         thermal = s.thermal
+        sensors = s.sensors
         if let v = s.volumes { volumes = v }
         refreshAppNames()
         processes = s.processes
 
-        cpuTotal.append(s.cpu.total * 100)
-        cpuSystem.append(s.cpu.system * 100)
+        let now = Date()
+        cpuTotal.append(s.cpu.total * 100, at: now)
+        cpuSystem.append(s.cpu.system * 100, at: now)
         if perCore.count != s.cpu.cores.count { perCore = s.cpu.cores.map { _ in Series(capacity: 40) } }
         for (i, v) in s.cpu.cores.enumerated() { perCore[i].append(v * 100) }
-        memoryUsed.append(s.memory.usedFraction * 100)
-        memoryPressure.append(s.memory.pressureFraction * 100)
-        gpuDevice.append(s.gpu.device * 100)
-        gpuRenderer.append(s.gpu.renderer * 100)
-        gpuTiler.append(s.gpu.tiler * 100)
-        diskRead.append(s.diskIO.readPerSec)
-        diskWrite.append(s.diskIO.writePerSec)
-        netDown.append(s.network.downPerSec)
-        netUp.append(s.network.upPerSec)
+        memoryUsed.append(s.memory.usedFraction * 100, at: now)
+        memoryPressure.append(s.memory.pressureFraction * 100, at: now)
+        gpuDevice.append(s.gpu.device * 100, at: now)
+        gpuRenderer.append(s.gpu.renderer * 100, at: now)
+        gpuTiler.append(s.gpu.tiler * 100, at: now)
+        diskRead.append(s.diskIO.readPerSec, at: now)
+        diskWrite.append(s.diskIO.writePerSec, at: now)
+        netDown.append(s.network.downPerSec, at: now)
+        netUp.append(s.network.upPerSec, at: now)
+        if let t = s.sensors.average(.cpu) { cpuTemperature.append(t, at: now) }
+        if let t = s.sensors.average(.gpu) { gpuTemperature.append(t, at: now) }
+        if let fan = s.sensors.fans.first { fanSpeed.append(fan.rpm, at: now) }
+        if let w = s.sensors.systemPower { systemPower.append(w, at: now) }
+        if s.power.hasBattery {
+            batteryLevel.append(s.power.percent * 100, at: now)
+            batteryPower.append(s.power.batteryWatts ?? 0, at: now)
+        }
+        sampleSelf()
         sampleCount += 1
+
+        alerts.evaluate(store: self, settings: settings)
+        await ai.observe(identities: processIdentities(), memory: s.memory, workingSet: info.gpuWorkingSet)
+    }
+
+    private func sampleSelf() {
+        let reading = SelfUsage.sample()
+        let now = Double(DispatchTime.now().uptimeNanoseconds) / 1e9
+        if let last = lastSelf, now > last.time {
+            selfCPU = max(0, (reading.cpuSeconds - last.cpu) / (now - last.time) * 100)
+        }
+        lastSelf = (reading.cpuSeconds, now)
+        selfMemory = reading.footprint
     }
 
     func refreshVolumes() {
@@ -213,6 +220,10 @@ final class MonitorStore {
             if let name = app.localizedName { names[app.processIdentifier] = name }
         }
         appNames = names
+    }
+
+    private func processIdentities() -> [ProcessIdentity] {
+        processes.map { ProcessIdentity(pid: $0.pid, name: $0.name, path: $0.path) }
     }
 
     func displayName(forBundle path: String) -> String {
@@ -268,7 +279,8 @@ final class MonitorStore {
         guard grouped else {
             return processes.map { p in
                 ProcessRow(id: "pid:\(p.pid)", name: appNames[p.pid] ?? p.name, iconPath: p.appBundlePath ?? "",
-                           pids: [p.pid], bundlePath: nil, cpu: p.cpu, memory: p.memory, threads: p.threads)
+                           pids: [p.pid], bundlePath: nil, cpu: p.cpu, memory: p.memory, threads: p.threads,
+                           diskRead: p.diskReadPerSec, diskWrite: p.diskWritePerSec, hasMetrics: true)
             }
         }
         var groups: [String: [ProcessSample]] = [:]
@@ -277,11 +289,14 @@ final class MonitorStore {
             if let bundle = members.first?.appBundlePath {
                 return ProcessRow(id: key, name: displayName(forBundle: bundle), iconPath: bundle, pids: members.map(\.pid),
                                   bundlePath: bundle, cpu: members.reduce(0) { $0 + $1.cpu },
-                                  memory: members.reduce(0) { $0 + $1.memory }, threads: members.reduce(0) { $0 + $1.threads })
+                                  memory: members.reduce(0) { $0 + $1.memory }, threads: members.reduce(0) { $0 + $1.threads },
+                                  diskRead: members.reduce(0) { $0 + $1.diskReadPerSec },
+                                  diskWrite: members.reduce(0) { $0 + $1.diskWritePerSec }, hasMetrics: true)
             }
             let p = members[0]
             return ProcessRow(id: key, name: appNames[p.pid] ?? p.name, iconPath: "", pids: [p.pid], bundlePath: nil,
-                              cpu: p.cpu, memory: p.memory, threads: p.threads)
+                              cpu: p.cpu, memory: p.memory, threads: p.threads,
+                              diskRead: p.diskReadPerSec, diskWrite: p.diskWritePerSec, hasMetrics: true)
         }
     }
 
@@ -308,7 +323,7 @@ final class MonitorStore {
         for pid in row.pids {
             if let app = NSRunningApplication(processIdentifier: pid) {
                 _ = force ? app.forceTerminate() : app.terminate()
-            } else {
+            } else if capabilities.canQuitProcesses {
                 kill(pid, force ? SIGKILL : SIGTERM)
             }
         }
@@ -337,7 +352,7 @@ final class MonitorStore {
         case .critical:
             score -= 35
             issues.append(Recommendation(id: "mem", symbol: "memorychip", title: "Memory pressure is critical",
-                                         detail: "Apps will slow down. Quit large apps or free memory now.",
+                                         detail: "Apps will slow down. Quit large apps now.",
                                          severity: 2, action: .page(.memory), actionLabel: "Fix"))
         case .normal:
             break
@@ -368,11 +383,16 @@ final class MonitorStore {
             score -= 20
             issues.append(Recommendation(id: "thermal", symbol: "thermometer.high", title: "Your Mac is running hot",
                                          detail: "macOS is limiting performance to cool down.", severity: 2,
-                                         action: .page(.cpu), actionLabel: "See CPU"))
+                                         action: .page(sensorsAvailable ? .sensors : .cpu), actionLabel: "See why"))
         case .critical: score -= 35
         default: break
         }
-
+        if let t = sensors.average(.cpu), t >= 100 { score -= 10 }
+        if power.hasBattery, let h = power.health, h < 0.8 {
+            issues.append(Recommendation(id: "battery", symbol: "battery.25percent", title: "Battery health is \(Fmt.percent(h))",
+                                         detail: "Below 80% Apple recommends a battery service.", severity: 1,
+                                         action: .page(.battery), actionLabel: "Details"))
+        }
         if gpuDevice.average(last: 8) > 90 { score -= 5 }
         return HealthReport(score: max(0, min(100, score)), issues: issues.sorted { $0.severity > $1.severity })
     }
@@ -407,4 +427,46 @@ final class MonitorStore {
             return error.localizedDescription
         }
     }
+
+    // MARK: Report
+
+    /// A plain-text snapshot for support threads and bug reports.
+    func report() -> String {
+        var lines: [String] = []
+        lines.append("Overdrive \(Bundle.main.shortVersion) (\(capabilities.editionName)) · \(Date().formatted(date: .abbreviated, time: .shortened))")
+        lines.append("\(info.modelName) (\(info.modelIdentifier)) · \(info.chip) · \(info.coreSummary) · \(Fmt.memory(info.physicalMemory))")
+        lines.append("\(info.osVersion) (\(info.osBuild)) · up \(Fmt.duration(info.uptime)) · thermal \(thermalLabel)")
+        lines.append("")
+        lines.append("CPU \(Fmt.percent(cpu.total)) (user \(Fmt.percent(cpu.user)), system \(Fmt.percent(cpu.system))) · load \(cpu.loadAverage.map { String(format: "%.2f", $0) }.joined(separator: " / "))")
+        lines.append("Memory \(Fmt.memory(memory.used)) of \(Fmt.memory(memory.total)) · app \(Fmt.memory(memory.app)) · wired \(Fmt.memory(memory.wired)) · compressed \(Fmt.memory(memory.compressed)) · cached \(Fmt.memory(memory.cached)) · swap \(Fmt.memory(memory.swapUsed)) · pressure \(memory.pressure.label)")
+        lines.append("GPU \(info.gpuName) · device \(Fmt.percent(gpu.device)) · in use \(Fmt.memory(gpu.inUseMemory))")
+        for v in volumes {
+            lines.append("Volume \(v.name): \(Fmt.storage(v.available)) available of \(Fmt.storage(v.total)) (purgeable \(Fmt.storage(v.purgeable)))")
+        }
+        lines.append("Network ↓ \(Fmt.rate(network.downPerSec)) ↑ \(Fmt.rate(network.upPerSec)) · since boot ↓ \(Fmt.storage(network.totalDown)) ↑ \(Fmt.storage(network.totalUp))")
+        if power.hasBattery {
+            lines.append("Battery \(Fmt.percent(power.percent)) · health \(power.health.map { Fmt.percent($0) } ?? "–") · \(power.cycleCount ?? 0) cycles · \(power.onAC ? "on power" : "on battery")\(power.batteryWatts.map { " · \(Fmt.watts($0))" } ?? "")")
+        }
+        if sensors.available {
+            let temps = SensorGroup.allCases.compactMap { g in sensors.average(g).map { "\(g.rawValue) \(settings.temperature($0))" } }
+            lines.append("Sensors " + temps.joined(separator: " · ") + sensors.fans.map { " · fan \($0.id + 1) \(Fmt.rpm($0.rpm))" }.joined()
+                         + (sensors.systemPower.map { " · \(Fmt.watts($0)) total" } ?? ""))
+        }
+        let topCPU = top(by: \.cpu, limit: 5)
+        if !topCPU.isEmpty, topCPU[0].hasMetrics {
+            lines.append("")
+            lines.append("Top CPU: " + topCPU.map { "\($0.name) \(String(format: "%.0f%%", $0.cpu))" }.joined(separator: ", "))
+            lines.append("Top memory: " + topByMemory(limit: 5).map { "\($0.name) \(Fmt.memory($0.memory))" }.joined(separator: ", "))
+        }
+        if !ai.runtimes.isEmpty {
+            lines.append("AI runtimes: " + ai.runtimes.map(\.name).joined(separator: ", ")
+                         + (ai.loaded.isEmpty ? "" : " · loaded " + ai.loaded.map { "\($0.name) \(Fmt.memory($0.size))" }.joined(separator: ", ")))
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
+extension Bundle {
+    var shortVersion: String { infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev" }
+    var buildNumber: String { infoDictionary?["CFBundleVersion"] as? String ?? "0" }
 }

@@ -61,6 +61,11 @@ public enum Shell {
         "do shell script \"\(appleScriptEscape(command))\" with prompt \"\(appleScriptEscape(prompt))\" with administrator privileges"
     }
 
+    /// Single-quotes a path for /bin/sh.
+    public static func quoted(_ path: String) -> String {
+        "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
     static func appleScriptEscape(_ s: String) -> String {
         s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
     }
@@ -91,6 +96,12 @@ public struct MaintenanceTask: Sendable, Identifiable {
         return false
     }
 
+    /// Shell and admin tasks need the direct edition; AppleScript ones run anywhere.
+    public var requiresShell: Bool {
+        if case .appleScript = runner { return false }
+        return true
+    }
+
     public func run() async -> ShellResult {
         switch runner {
         case .shell(let command):
@@ -98,7 +109,17 @@ public struct MaintenanceTask: Sendable, Identifiable {
         case .admin(let command):
             return await Shell.runAsAdmin(command, prompt: "Overdrive needs your password to \(title.lowercased()).")
         case .appleScript(let script):
-            return await Shell.run("/usr/bin/osascript", ["-e", script])
+            // In-process, so it also works in the App Sandbox (with the Apple Events entitlement and the person's consent).
+            return await Task.detached {
+                var error: NSDictionary?
+                let result = NSAppleScript(source: script)?.executeAndReturnError(&error)
+                if let error {
+                    let code = (error[NSAppleScript.errorNumber] as? Int) ?? 1
+                    let message = (error[NSAppleScript.errorMessage] as? String) ?? "AppleScript failed"
+                    return ShellResult(status: Int32(code == -128 ? 1 : code), output: code == -128 ? "User canceled. (-128)" : message)
+                }
+                return ShellResult(status: 0, output: result?.stringValue ?? "")
+            }.value
         }
     }
 }
@@ -106,7 +127,12 @@ public struct MaintenanceTask: Sendable, Identifiable {
 public enum MaintenanceCatalog {
     static let lsregister = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
-    public static func all(fileManager fm: FileManager = .default) -> [MaintenanceTask] {
+    public static func all(fileManager fm: FileManager = .default, capabilities: Capabilities = .current) -> [MaintenanceTask] {
+        let tasks = everything(fileManager: fm)
+        return capabilities.canRunShell ? tasks : tasks.filter { !$0.requiresShell }
+    }
+
+    static func everything(fileManager fm: FileManager) -> [MaintenanceTask] {
         var tasks: [MaintenanceTask] = [
             MaintenanceTask(id: "purge", title: "Free Up Memory",
                             detail: "Flushes inactive file cache so apps get free RAM immediately.",

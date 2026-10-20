@@ -4,16 +4,17 @@ import SwiftUI
 
 struct Backdrop: View {
     var accent: [Color]
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
+        let strength = scheme == .dark ? 1.0 : 0.55
         ZStack {
             Theme.background
-            RadialGradient(colors: [accent[0].opacity(0.16), .clear], center: UnitPoint(x: 0.95, y: 0.0),
+            RadialGradient(colors: [accent[0].opacity(0.16 * strength), .clear], center: UnitPoint(x: 0.95, y: 0.0),
                            startRadius: 0, endRadius: 720)
-            RadialGradient(colors: [accent[1].opacity(0.11), .clear], center: UnitPoint(x: 0.1, y: 1.05),
+            RadialGradient(colors: [accent[1].opacity(0.11 * strength), .clear], center: UnitPoint(x: 0.1, y: 1.05),
                            startRadius: 0, endRadius: 640)
         }
-        .drawingGroup()
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.9), value: accent)
     }
@@ -21,20 +22,15 @@ struct Backdrop: View {
 
 struct CardBackground: View {
     var highlight: Color?
-    var cornerRadius: CGFloat = 20
+    var cornerRadius: CGFloat = 18
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         shape
-            .fill(LinearGradient(colors: [Color.white.opacity(0.058), Color.white.opacity(0.022)],
-                                 startPoint: .top, endPoint: .bottom))
-            .overlay(
-                shape.strokeBorder(
-                    LinearGradient(colors: [(highlight ?? .white).opacity(highlight == nil ? 0.13 : 0.55),
-                                            Color.white.opacity(0.03)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: 1)
-            )
+            .fill(LinearGradient(colors: [Theme.cardTop, Theme.cardBottom], startPoint: .top, endPoint: .bottom))
+            .overlay(shape.strokeBorder(highlight.map { $0.opacity(0.55) } ?? Theme.border, lineWidth: 1))
+            .shadow(color: .black.opacity(scheme == .dark ? 0 : 0.05), radius: 8, y: 3)
     }
 }
 
@@ -59,14 +55,15 @@ struct IconBadge: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
         shape
-            .fill(LinearGradient(colors: colors.map { $0.opacity(0.24) }, startPoint: .topLeading, endPoint: .bottomTrailing))
-            .overlay(shape.strokeBorder(colors[0].opacity(0.35), lineWidth: 0.6))
+            .fill(LinearGradient(colors: colors.map { $0.opacity(0.18) }, startPoint: .topLeading, endPoint: .bottomTrailing))
+            .overlay(shape.strokeBorder(colors[0].opacity(0.3), lineWidth: 0.6))
             .frame(width: size, height: size)
             .overlay(
                 Image(systemName: symbol)
                     .font(.system(size: size * 0.46, weight: .semibold))
                     .foregroundStyle(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
             )
+            .accessibilityHidden(true)
     }
 }
 
@@ -86,6 +83,8 @@ struct CardHeader<Trailing: View>: View {
                     Text(subtitle).font(.system(size: 11.5)).foregroundStyle(Theme.tertiary).lineLimit(1)
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 8)
             trailing()
         }
@@ -107,6 +106,7 @@ struct PageScaffold<Trailing: View, Content: View>: View {
     var scrolls = true
     @ViewBuilder var trailing: () -> Trailing
     @ViewBuilder var content: () -> Content
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         if scrolls {
@@ -120,11 +120,13 @@ struct PageScaffold<Trailing: View, Content: View>: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .center, spacing: 15) {
                 IconBadge(symbol: page.symbol, colors: page.accent, size: 46)
-                    .shadow(color: page.accent[1].opacity(0.45), radius: 16)
+                    .shadow(color: page.accent[1].opacity(scheme == .dark ? 0.45 : 0.2), radius: 16)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(page.title).font(Theme.rounded(29, .bold)).foregroundStyle(Theme.text)
                     Text(subtitle).font(.system(size: 13)).foregroundStyle(Theme.secondary).lineLimit(1)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 12)
                 trailing()
             }
@@ -138,8 +140,8 @@ struct PageScaffold<Trailing: View, Content: View>: View {
 }
 
 extension PageScaffold where Trailing == EmptyView {
-    init(page: Page, subtitle: String, @ViewBuilder content: @escaping () -> Content) {
-        self.init(page: page, subtitle: subtitle, trailing: { EmptyView() }, content: content)
+    init(page: Page, subtitle: String, scrolls: Bool = true, @ViewBuilder content: @escaping () -> Content) {
+        self.init(page: page, subtitle: subtitle, scrolls: scrolls, trailing: { EmptyView() }, content: content)
     }
 }
 
@@ -149,8 +151,11 @@ struct RingGauge<Center: View>: View {
     var value: Double
     var colors: [Color]
     var lineWidth: CGFloat = 12
+    var label: String
     @ViewBuilder var center: () -> Center
     @State private var appeared = false
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         // Sweeps in once per appearance. Live updates are deliberately not animated: a 120 Hz animation
@@ -158,7 +163,6 @@ struct RingGauge<Center: View>: View {
         let clamped = appeared ? max(0, min(1, value.isFinite ? value : 0)) : 0
         let glow = lineWidth * 1.4
         ZStack {
-            // Rasterized on the GPU as one layer; the sweep animation touches nothing but this layer.
             ZStack {
                 Circle().stroke(Theme.track, lineWidth: lineWidth)
                 Circle()
@@ -168,7 +172,7 @@ struct RingGauge<Center: View>: View {
                                         endAngle: .degrees(max(1, 360 * clamped))),
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .shadow(color: colors.last!.opacity(0.55), radius: lineWidth * 0.7)
+                    .shadow(color: colors.last!.opacity(scheme == .dark ? 0.55 : 0.25), radius: lineWidth * 0.7)
             }
             .padding(glow)
             .drawingGroup()
@@ -176,7 +180,12 @@ struct RingGauge<Center: View>: View {
             center()
         }
         .padding(lineWidth / 2)
-        .onAppear { withAnimation(.easeOut(duration: 0.9)) { appeared = true } }
+        .onAppear {
+            if reduceMotion { appeared = true } else { withAnimation(.easeOut(duration: 0.9)) { appeared = true } }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(Text("\(Int((value.isFinite ? value : 0) * 100)) percent"))
     }
 }
 
@@ -185,6 +194,17 @@ struct ChartSeries: Identifiable {
     let points: [ChartPoint]
     let color: Color
     var fill = true
+
+    init(id: String, points: [ChartPoint], color: Color, fill: Bool = true) {
+        self.id = id
+        self.points = points
+        self.color = color
+        self.fill = fill
+    }
+
+    init(id: String, series: Series, color: Color, fill: Bool = true) {
+        self.init(id: id, points: series.points, color: color, fill: fill)
+    }
 }
 
 struct LiveChart: View {
@@ -193,6 +213,7 @@ struct LiveChart: View {
     var yMax: Double
     var height: CGFloat = 180
     var showAxis = true
+    var label = "History"
     var format: (Double) -> String = { "\(Int($0))%" }
 
     private static let gridFractions: [Double] = [1, 0.75, 0.5, 0.25, 0]
@@ -208,7 +229,7 @@ struct LiveChart: View {
                 ForEach(series) { s in
                     if s.fill {
                         TracePath(points: s.points, xDomain: xDomain, yMax: top, closed: true)
-                            .fill(LinearGradient(colors: [s.color.opacity(0.32), s.color.opacity(0)], startPoint: .top, endPoint: .bottom))
+                            .fill(LinearGradient(colors: [s.color.opacity(0.3), s.color.opacity(0)], startPoint: .top, endPoint: .bottom))
                     }
                     TracePath(points: s.points, xDomain: xDomain, yMax: top, closed: false)
                         .stroke(s.color, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
@@ -226,9 +247,14 @@ struct LiveChart: View {
                     }
                 }
                 .frame(width: 52)
+                .accessibilityHidden(true)
             }
         }
         .frame(height: height)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(Text(series.map { "\($0.id): now \(format($0.points.last?.value ?? 0)), peak \(format($0.points.map(\.value).max() ?? 0))" }
+            .joined(separator: ". ")))
     }
 }
 
@@ -281,12 +307,13 @@ struct Sparkline: View {
     let color: Color
     var yMax: Double = 100
     var height: CGFloat = 34
+    var label = "Recent history"
 
     var body: some View {
         // Scale to recent peaks (never below a quarter of the range) so a quiet Mac still draws a visible line.
         let top = min(yMax, max(yMax / 4, series.maxValue * 1.25))
-        LiveChart(series: [ChartSeries(id: "s", points: series.points, color: color)],
-                  xDomain: series.xDomain, yMax: top, height: height, showAxis: false)
+        LiveChart(series: [ChartSeries(id: label, points: series.points, color: color, fill: false)],
+                  xDomain: series.xDomain, yMax: top, height: height, showAxis: false, label: label)
     }
 }
 
@@ -298,6 +325,16 @@ func niceCeiling(_ value: Double, minimum: Double) -> Double {
         return step * exponent
     }
     return 10 * exponent
+}
+
+struct RangePicker: View {
+    @Binding var range: ChartRange
+    var colors: [Color]
+
+    var body: some View {
+        SegmentedTabs(selection: $range, options: ChartRange.allCases.map { ($0, $0.label) }, colors: colors)
+            .accessibilityLabel("Chart range")
+    }
 }
 
 struct Segment: Identifiable {
@@ -320,13 +357,14 @@ struct SegmentBar: View {
                 ForEach(visible) { s in
                     RoundedRectangle(cornerRadius: height * 0.3, style: .continuous)
                         .fill(LinearGradient(colors: [s.color, s.color.opacity(0.75)], startPoint: .top, endPoint: .bottom))
-                        .frame(width: total > 0 ? usable * CGFloat(s.value / total) : 0)
+                        .frame(width: total > 0 ? usable * CGFloat(min(1, s.value / total)) : 0)
                 }
                 Spacer(minLength: 0)
             }
         }
         .frame(height: height)
         .background(RoundedRectangle(cornerRadius: height * 0.3, style: .continuous).fill(Theme.track))
+        .accessibilityHidden(true)
     }
 }
 
@@ -342,6 +380,7 @@ struct LegendRow: View {
             Spacer(minLength: 6)
             Text(value).font(.system(size: 12.5, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.text)
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -366,12 +405,14 @@ struct StatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.6).foregroundStyle(Theme.tertiary)
-            Text(value).font(Theme.rounded(19)).monospacedDigit().foregroundStyle(tint).lineLimit(1).minimumScaleFactor(0.7)
+            Text(value).font(Theme.rounded(19)).monospacedDigit().foregroundStyle(tint)
+                .lineLimit(1).minimumScaleFactor(0.7)
             if let caption {
                 Text(caption).font(.system(size: 11)).foregroundStyle(Theme.tertiary).lineLimit(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -390,6 +431,7 @@ struct Pill: View {
         .padding(.vertical, 5)
         .background(Capsule().fill(color.opacity(0.13)))
         .overlay(Capsule().strokeBorder(color.opacity(0.28), lineWidth: 0.6))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -409,10 +451,84 @@ struct BigNumber: View {
                 Text(unit).font(Theme.rounded(size * 0.42, .semibold)).foregroundStyle(Theme.secondary)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
-// MARK: - Buttons
+/// An inline message: status, warning or error, with an optional action.
+struct Notice<Action: View>: View {
+    let symbol: String
+    let color: Color
+    let text: String
+    @ViewBuilder var action: () -> Action
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol).font(.system(size: 13, weight: .semibold)).foregroundStyle(color)
+            Text(text).font(.system(size: 12.5)).foregroundStyle(Theme.text).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
+            action()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(color.opacity(0.1)))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(color.opacity(0.25), lineWidth: 0.6))
+    }
+}
+
+extension Notice where Action == EmptyView {
+    init(symbol: String, color: Color, text: String) {
+        self.init(symbol: symbol, color: color, text: text) { EmptyView() }
+    }
+}
+
+/// Shown by cleanup-type pages in the App Store edition until the home folder is granted.
+struct AccessGate: View {
+    @Environment(MonitorStore.self) private var store
+    let what: String
+
+    var body: some View {
+        Card(highlight: Theme.cleanup[0].opacity(0.5)) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    IconBadge(symbol: "folder.badge.person.crop", colors: Theme.cleanup, size: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Grant access to your home folder").font(Theme.rounded(15)).foregroundStyle(Theme.text)
+                        Text("The App Store edition can only read folders you choose. Pick your home folder once to \(what).")
+                            .font(.system(size: 12.5)).foregroundStyle(Theme.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                if let error = store.access.lastError {
+                    Text(error).font(.system(size: 12)).foregroundStyle(Theme.bad)
+                }
+                HStack {
+                    Button { store.access.requestAccess() } label: { Label("Choose Home Folder…", systemImage: "folder") }
+                        .buttonStyle(GlowButtonStyle(colors: Theme.cleanup))
+                    Text("Nothing is removed without your confirmation, and nothing leaves this Mac.")
+                        .font(.system(size: 11.5)).foregroundStyle(Theme.tertiary)
+                }
+            }
+        }
+    }
+}
+
+struct EmptyHint: View {
+    let symbol: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: symbol).font(.system(size: 26, weight: .light)).foregroundStyle(Theme.tertiary)
+            Text(title).font(Theme.rounded(14)).foregroundStyle(Theme.secondary)
+            Text(detail).font(.system(size: 12)).foregroundStyle(Theme.tertiary).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 26)
+    }
+}
+
+// MARK: - Buttons and controls
 
 struct GlowButtonStyle: ButtonStyle {
     var colors: [Color]
@@ -427,16 +543,17 @@ struct GlowButtonStyle: ButtonStyle {
         let colors: [Color]
         let compact: Bool
         @Environment(\.isEnabled) private var isEnabled
+        @Environment(\.colorScheme) private var scheme
 
         var body: some View {
             configuration.label
                 .font(.system(size: compact ? 12 : 13, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.onAccent)
                 .padding(.horizontal, compact ? 12 : 17)
                 .padding(.vertical, compact ? 6 : 9)
                 .background(Capsule().fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)))
                 .overlay(Capsule().strokeBorder(.white.opacity(0.28), lineWidth: 0.6))
-                .shadow(color: colors.last!.opacity(isEnabled ? (configuration.isPressed ? 0.25 : 0.5) : 0), radius: 12, y: 3)
+                .shadow(color: colors.last!.opacity(isEnabled ? (configuration.isPressed ? 0.2 : (scheme == .dark ? 0.5 : 0.3)) : 0), radius: 12, y: 3)
                 .scaleEffect(configuration.isPressed ? 0.97 : 1)
                 .opacity(isEnabled ? 1 : 0.38)
                 .animation(.snappy(duration: 0.18), value: configuration.isPressed)
@@ -466,8 +583,8 @@ struct GhostButtonStyle: ButtonStyle {
                 .foregroundStyle(tint)
                 .padding(.horizontal, compact ? 11 : 15)
                 .padding(.vertical, compact ? 6 : 9)
-                .background(Capsule().fill(Color.white.opacity(configuration.isPressed ? 0.14 : (hovering ? 0.1 : 0.065))))
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.1), lineWidth: 0.6))
+                .background(Capsule().fill(configuration.isPressed ? Theme.fillPressed : (hovering ? Theme.fillHover : Theme.fill)))
+                .overlay(Capsule().strokeBorder(Theme.border, lineWidth: 0.6))
                 .opacity(isEnabled ? 1 : 0.38)
                 .onHover { hovering = $0 }
                 .contentShape(Capsule())
@@ -488,11 +605,12 @@ struct IconButton: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(hovering ? Theme.text : tint)
                 .frame(width: 26, height: 26)
-                .background(Circle().fill(Color.white.opacity(hovering ? 0.12 : 0.05)))
+                .background(Circle().fill(hovering ? Theme.fillHover : Theme.fill))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help(help)
+        .accessibilityLabel(help)
     }
 }
 
@@ -500,23 +618,25 @@ struct Checkbox: View {
     @Binding var isOn: Bool
     var mixed = false
     var color: Color = Theme.cleanup[1]
+    var label = "Select"
 
     var body: some View {
         Button { isOn.toggle() } label: {
             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(isOn || mixed ? AnyShapeStyle(color.gradient) : AnyShapeStyle(Color.white.opacity(0.06)))
+                .fill(isOn || mixed ? AnyShapeStyle(color.gradient) : AnyShapeStyle(Theme.fill))
                 .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .strokeBorder(isOn || mixed ? color.opacity(0.6) : Color.white.opacity(0.22), lineWidth: 1))
+                    .strokeBorder(isOn || mixed ? color.opacity(0.6) : Theme.border, lineWidth: 1))
                 .frame(width: 17, height: 17)
                 .overlay(
                     Image(systemName: mixed && !isOn ? "minus" : "checkmark")
                         .font(.system(size: 9.5, weight: .black))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.onAccent)
                         .opacity(isOn || mixed ? 1 : 0)
                 )
         }
         .buttonStyle(.plain)
-        .animation(.snappy(duration: 0.15), value: isOn)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 
@@ -531,22 +651,23 @@ struct SegmentedTabs<Value: Hashable>: View {
                 Button { withAnimation(.snappy) { selection = value } } label: {
                     Text(label)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(selection == value ? .white : Theme.secondary)
+                        .foregroundStyle(selection == value ? Theme.onAccent : Theme.secondary)
                         .padding(.horizontal, 13)
                         .padding(.vertical, 6)
                         .background {
                             if selection == value {
-                                Capsule().fill(LinearGradient(colors: colors.map { $0.opacity(0.55) }, startPoint: .leading, endPoint: .trailing))
+                                Capsule().fill(LinearGradient(colors: colors.map { $0.opacity(0.75) }, startPoint: .leading, endPoint: .trailing))
                             }
                         }
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityAddTraits(selection == value ? .isSelected : [])
             }
         }
         .padding(3)
-        .background(Capsule().fill(Color.white.opacity(0.06)))
-        .overlay(Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 0.6))
+        .background(Capsule().fill(Theme.fill))
+        .overlay(Capsule().strokeBorder(Theme.border, lineWidth: 0.6))
     }
 }
 
@@ -566,11 +687,33 @@ struct SearchField: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.tertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(.horizontal, 11)
         .padding(.vertical, 7)
-        .background(Capsule().fill(Color.white.opacity(0.06)))
-        .overlay(Capsule().strokeBorder(Color.white.opacity(0.09), lineWidth: 0.6))
+        .background(Capsule().fill(Theme.fill))
+        .overlay(Capsule().strokeBorder(Theme.border, lineWidth: 0.6))
+    }
+}
+
+/// A row that highlights on hover and can be selected; used by every list in the app.
+struct HoverRow<Content: View>: View {
+    var selected = false
+    var accent: Color = Theme.cleanup[1]
+    @ViewBuilder var content: (Bool) -> Content
+    @State private var hovering = false
+
+    var body: some View {
+        content(hovering)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(selected ? accent.opacity(0.16) : (hovering ? Theme.fill : .clear))
+                    .padding(.horizontal, 6)
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
     }
 }

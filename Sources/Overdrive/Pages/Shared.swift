@@ -16,10 +16,11 @@ struct ProcessLine: View {
         let value = metric == .cpu ? row.cpu : Double(row.memory)
         let colors = metric == .cpu ? Theme.cpu : Theme.memory
         HStack(spacing: 11) {
-            (store.icon(for: row.iconPath))
+            store.icon(for: row.iconPath)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: 24, height: 24)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(row.name).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
@@ -40,15 +41,20 @@ struct ProcessLine: View {
                         }
                 }
                 .frame(height: 4)
+                .accessibilityHidden(true)
             }
-            IconButton(symbol: "xmark", tint: Theme.tertiary, help: "Quit \(row.name)") {
-                store.requestQuit(row)
+            if store.capabilities.canQuitProcesses {
+                IconButton(symbol: "xmark", tint: Theme.tertiary, help: "Quit \(row.name)") {
+                    store.requestQuit(row)
+                }
+                .opacity(hovering ? 1 : 0)
             }
-            .opacity(hovering ? 1 : 0)
         }
         .padding(.vertical, 5)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(row.name), \(metric == .cpu ? String(format: "%.0f percent CPU", row.cpu) : Fmt.memory(row.memory))")
     }
 }
 
@@ -80,18 +86,74 @@ struct TopProcessesCard: View {
     }
 }
 
-struct EmptyHint: View {
+struct RateLabel: View {
     let symbol: String
-    let title: String
-    let detail: String
+    let color: Color
+    let label: String
+    let value: Double
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: symbol).font(.system(size: 26, weight: .light)).foregroundStyle(Theme.tertiary)
-            Text(title).font(Theme.rounded(14)).foregroundStyle(Theme.secondary)
-            Text(detail).font(.system(size: 12)).foregroundStyle(Theme.tertiary).multilineTextAlignment(.center)
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(color)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(color.opacity(0.14)))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(label.uppercased()).font(.system(size: 9.5, weight: .bold)).tracking(0.6).foregroundStyle(Theme.tertiary)
+                Text(Fmt.rate(value)).font(Theme.rounded(17)).monospacedDigit().foregroundStyle(Theme.text)
+            }
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 26)
+        .accessibilityElement(children: .combine)
     }
 }
+
+struct TaskStatusLine: View {
+    let state: MaintenanceModel.State
+
+    var body: some View {
+        switch state {
+        case .idle:
+            EmptyView()
+        case .running:
+            Label("Working…", systemImage: "hourglass").font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.secondary)
+        case .success(let message):
+            Label(message, systemImage: "checkmark.circle.fill").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.good)
+        case .failure(let message):
+            Label(message, systemImage: "exclamationmark.triangle.fill").font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Theme.bad).lineLimit(3)
+        case .cancelled:
+            Label("Cancelled", systemImage: "xmark.circle").font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.tertiary)
+        }
+    }
+}
+
+/// Header + range picker for every history card.
+struct HistoryHeader<Legend: View>: View {
+    @Environment(MonitorStore.self) private var store
+    let title: String
+    var subtitle: String?
+    let colors: [Color]
+    @ViewBuilder var legend: () -> Legend
+
+    var body: some View {
+        @Bindable var settings = store.settings
+        CardHeader(title: title, subtitle: subtitle, symbol: "waveform.path.ecg", colors: colors) {
+            HStack(spacing: 14) {
+                legend()
+                RangePicker(range: $settings.chartRange, colors: colors)
+            }
+        }
+    }
+}
+
+extension HistoryHeader where Legend == EmptyView {
+    init(title: String, subtitle: String? = nil, colors: [Color]) {
+        self.init(title: title, subtitle: subtitle, colors: colors) { EmptyView() }
+    }
+}
+
+/// Opens Finder on a path and shows it in a tooltip-friendly form.
+func abbreviated(_ path: String) -> String { (path as NSString).abbreviatingWithTildeInPath }

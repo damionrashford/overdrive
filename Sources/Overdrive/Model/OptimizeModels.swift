@@ -12,6 +12,7 @@ final class CleanupModel {
         let displayName: String
         var size: UInt64?
         var selected: Bool
+        var ignored: Bool
         var id: String { item.id }
     }
 
@@ -38,7 +39,7 @@ final class CleanupModel {
     var selectedCount: Int { groups.reduce(0) { $0 + $1.selectedCount } }
     var selectedTrashCount: Int { groups.flatMap(\.entries).filter { $0.selected && $0.item.mode == .trash }.count }
 
-    func scan() async {
+    func scan(exclusions: Set<String>) async {
         guard phase != .scanning && phase != .cleaning else { return }
         phase = .scanning
         freed = 0
@@ -48,7 +49,9 @@ final class CleanupModel {
         let categories = await Task.detached { CleanupCatalog.build() }.value
         groups = categories.map { category in
             Group(category: category, entries: category.items.map {
-                Entry(item: $0, displayName: Self.friendlyName($0.title), size: nil, selected: $0.defaultSelected)
+                let ignored = exclusions.contains($0.id)
+                return Entry(item: $0, displayName: Self.friendlyName($0.title), size: nil,
+                             selected: $0.defaultSelected && !ignored, ignored: ignored)
             })
         }
         let items = categories.flatMap(\.items)
@@ -107,11 +110,15 @@ final class CleanupModel {
     }
 
     func setSelected(_ id: String, _ selected: Bool) {
-        for g in groups.indices {
-            if let e = groups[g].entries.firstIndex(where: { $0.id == id }) {
-                groups[g].entries[e].selected = selected
-                return
-            }
+        mutate(id) { $0.selected = selected }
+    }
+
+    /// Ignored entries stay visible but are never preselected again.
+    func setIgnored(_ id: String, _ ignored: Bool, settings: AppSettings) {
+        if ignored { settings.cleanupExclusions.insert(id) } else { settings.cleanupExclusions.remove(id) }
+        mutate(id) {
+            $0.ignored = ignored
+            if ignored { $0.selected = false }
         }
     }
 
@@ -121,16 +128,20 @@ final class CleanupModel {
 
     func setAll(_ selected: Bool, in groupID: String) {
         guard let g = groups.firstIndex(where: { $0.id == groupID }) else { return }
-        for e in groups[g].entries.indices { groups[g].entries[e].selected = selected }
+        for e in groups[g].entries.indices where !groups[g].entries[e].ignored { groups[g].entries[e].selected = selected }
     }
 
-    private func setSize(_ id: String, _ size: UInt64) {
+    private func mutate(_ id: String, _ body: (inout Entry) -> Void) {
         for g in groups.indices {
             if let e = groups[g].entries.firstIndex(where: { $0.id == id }) {
-                groups[g].entries[e].size = size
+                body(&groups[g].entries[e])
                 return
             }
         }
+    }
+
+    private func setSize(_ id: String, _ size: UInt64) {
+        mutate(id) { $0.size = size }
     }
 
     static let knownNames: [String: String] = [
@@ -239,6 +250,7 @@ final class LargeFilesModel {
         }
         selection = selection.filter { id in files.contains { $0.id == id } }
         lastError = failures.isEmpty ? nil : "Couldn’t move \(failures.joined(separator: ", ")) to the Trash."
+        MonitorStore.shared.refreshVolumes()
     }
 }
 

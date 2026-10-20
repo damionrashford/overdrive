@@ -9,9 +9,13 @@ struct CleanupPage: View {
         PageScaffold(page: .cleanup, subtitle: subtitle) {
             SegmentedTabs(selection: $store.cleanupTab, options: [(.junk, "Junk"), (.large, "Large Files")], colors: Theme.cleanup)
         } content: {
-            switch store.cleanupTab {
-            case .junk: JunkView()
-            case .large: LargeFilesView()
+            if store.access.isRequired, !store.access.hasAccess {
+                AccessGate(what: "find caches, logs and large files")
+            } else {
+                switch store.cleanupTab {
+                case .junk: JunkView()
+                case .large: LargeFilesView()
+                }
             }
         }
     }
@@ -35,11 +39,10 @@ private struct JunkView: View {
             Card(highlight: Theme.cleanup[0].opacity(0.5)) {
                 VStack(spacing: 14) {
                     IconBadge(symbol: "sparkles", colors: Theme.cleanup, size: 64)
-                        .shadow(color: Theme.cleanup[1].opacity(0.5), radius: 20)
                     Text("Find reclaimable space").font(Theme.rounded(22, .bold)).foregroundStyle(Theme.text)
-                    Text("Scans app caches, logs, developer build products, package caches, the Trash and stale downloads. Nothing is removed until you review it.")
+                    Text("Scans app caches, logs, developer build products, package caches, the Trash and stale downloads. Everything is listed first; nothing is removed until you confirm.")
                         .font(.system(size: 13)).foregroundStyle(Theme.secondary).multilineTextAlignment(.center).frame(maxWidth: 460)
-                    Button { Task { await model.scan() } } label: { Label("Scan My Mac", systemImage: "magnifyingglass") }
+                    Button { Task { await model.scan(exclusions: store.settings.cleanupExclusions) } } label: { Label("Scan My Mac", systemImage: "magnifyingglass") }
                         .buttonStyle(GlowButtonStyle(colors: Theme.cleanup))
                         .padding(.top, 4)
                 }
@@ -97,7 +100,7 @@ private struct JunkView: View {
                     }
                 }
                 Spacer()
-                Button { Task { await model.scan() } } label: { Label("Rescan", systemImage: "arrow.clockwise") }
+                Button { Task { await model.scan(exclusions: store.settings.cleanupExclusions) } } label: { Label("Rescan", systemImage: "arrow.clockwise") }
                     .buttonStyle(GhostButtonStyle())
                     .disabled(model.phase == .cleaning)
                 if model.phase != .done || model.selectedCount > 0 {
@@ -130,11 +133,12 @@ private struct CategoryCard: View {
     var body: some View {
         let model = store.cleanup
         if let group = model.groups.first(where: { $0.id == groupID }) {
-            let all = group.selectedCount == group.entries.count
+            let selectable = group.entries.filter { !$0.ignored }.count
+            let all = selectable > 0 && group.selectedCount == selectable
             Card(padding: 0) {
                 HStack(spacing: 12) {
                     Checkbox(isOn: Binding(get: { all }, set: { model.setAll($0, in: groupID) }),
-                             mixed: group.selectedCount > 0)
+                             mixed: group.selectedCount > 0, label: "Select all in \(group.category.title)")
                     IconBadge(symbol: group.category.symbol, colors: Theme.cleanup, size: 30)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(group.category.title).font(Theme.rounded(14.5)).foregroundStyle(Theme.text)
@@ -153,6 +157,8 @@ private struct CategoryCard: View {
                 .padding(16)
                 .contentShape(Rectangle())
                 .onTapGesture { withAnimation(.snappy) { model.toggleExpanded(groupID) } }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel("\(group.category.title), \(Fmt.storage(group.total)), \(group.expanded ? "expanded" : "collapsed")")
 
                 if group.expanded {
                     Divider().overlay(Theme.hairline)
@@ -175,35 +181,38 @@ private struct CategoryCard: View {
 }
 
 private struct EntryRow: View {
+    @Environment(MonitorStore.self) private var store
     let entry: CleanupModel.Entry
     @Binding var isOn: Bool
-    @State private var hovering = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            Checkbox(isOn: $isOn)
-            CleanupModel.icon(for: entry).resizable().frame(width: 20, height: 20)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(entry.displayName).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
-                Text(entry.item.note ?? (entry.item.url.path as NSString).abbreviatingWithTildeInPath)
-                    .font(.system(size: 11)).foregroundStyle(Theme.tertiary).lineLimit(1).truncationMode(.middle)
-            }
-            Spacer()
-            if hovering {
-                IconButton(symbol: "folder", help: "Show in Finder") {
-                    NSWorkspace.shared.activateFileViewerSelecting([entry.item.url])
+        HoverRow { hovering in
+            HStack(spacing: 12) {
+                Checkbox(isOn: $isOn, label: entry.displayName).disabled(entry.ignored).opacity(entry.ignored ? 0.4 : 1)
+                CleanupModel.icon(for: entry).resizable().frame(width: 20, height: 20)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 6) {
+                        Text(entry.displayName).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
+                        if entry.ignored { Pill(text: "Ignored", color: Theme.tertiary) }
+                    }
+                    Text(entry.item.note ?? abbreviated(entry.item.url.path))
+                        .font(.system(size: 11)).foregroundStyle(Theme.tertiary).lineLimit(1).truncationMode(.middle)
                 }
+                Spacer()
+                if hovering {
+                    IconButton(symbol: entry.ignored ? "eye" : "eye.slash", help: entry.ignored ? "Stop ignoring" : "Ignore from now on") {
+                        store.cleanup.setIgnored(entry.id, !entry.ignored, settings: store.settings)
+                    }
+                    IconButton(symbol: "folder", help: "Show in Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([entry.item.url])
+                    }
+                }
+                Text(Fmt.storage(entry.size ?? 0)).font(.system(size: 12, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Theme.secondary).frame(width: 80, alignment: .trailing)
             }
-            Text(Fmt.storage(entry.size ?? 0)).font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(Theme.secondary).frame(width: 80, alignment: .trailing)
+            .padding(.leading, 30)
         }
-        .padding(.horizontal, 16)
-        .padding(.leading, 30)
-        .padding(.vertical, 6)
-        .background(hovering ? Color.white.opacity(0.03) : .clear)
-        .contentShape(Rectangle())
-        .onHover { hovering = $0 }
-        .onTapGesture { isOn.toggle() }
+        .onTapGesture { if !entry.ignored { isOn.toggle() } }
     }
 }
 
@@ -220,11 +229,11 @@ private struct LargeFilesView: View {
                 IconBadge(symbol: "doc.viewfinder", colors: Theme.cleanup, size: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Large files in your home folder").font(Theme.rounded(14.5)).foregroundStyle(Theme.text)
-                    Text("Skips Library, the Trash, node_modules, .git and mounted drives.")
+                    Text("Skips Library, the Trash, node_modules, .git and mounted drives. Files only ever go to the Trash.")
                         .font(.system(size: 11.5)).foregroundStyle(Theme.tertiary)
                 }
                 Spacer()
-                Picker("", selection: Binding(get: { model.threshold }, set: { model.threshold = $0 })) {
+                Picker("Minimum size", selection: Binding(get: { model.threshold }, set: { model.threshold = $0 })) {
                     ForEach(LargeFilesModel.thresholds, id: \.self) { t in Text("≥ \(Fmt.storage(t))").tag(t) }
                 }
                 .labelsHidden()
@@ -270,8 +279,7 @@ private struct LargeFilesView: View {
                 if model.files.isEmpty {
                     EmptyHint(symbol: "checkmark.seal", title: "No files that big",
                               detail: "Nothing over \(Fmt.storage(model.threshold)) outside Library.")
-                }
-                if !model.files.isEmpty {
+                } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(model.files) { file in
@@ -299,33 +307,29 @@ private struct LargeFileRow: View {
     @Environment(MonitorStore.self) private var store
     let file: LargeFile
     @Binding var isOn: Bool
-    @State private var hovering = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            Checkbox(isOn: $isOn)
-            (store.icon(for: file.url.path)).resizable().frame(width: 24, height: 24)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(file.url.lastPathComponent).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
-                Text((file.url.deletingLastPathComponent().path as NSString).abbreviatingWithTildeInPath)
-                    .font(.system(size: 11)).foregroundStyle(Theme.tertiary).lineLimit(1).truncationMode(.middle)
+        HoverRow { hovering in
+            HStack(spacing: 12) {
+                Checkbox(isOn: $isOn, label: file.url.lastPathComponent)
+                store.icon(for: file.url.path).resizable().frame(width: 24, height: 24)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(file.url.lastPathComponent).font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
+                    Text(abbreviated(file.url.deletingLastPathComponent().path))
+                        .font(.system(size: 11)).foregroundStyle(Theme.tertiary).lineLimit(1).truncationMode(.middle)
+                }
+                Spacer()
+                if let date = file.modified {
+                    Text(date.formatted(date: .abbreviated, time: .omitted)).font(.system(size: 11.5)).foregroundStyle(Theme.tertiary)
+                }
+                IconButton(symbol: "magnifyingglass", help: "Show in Finder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([file.url])
+                }
+                .opacity(hovering ? 1 : 0)
+                Text(Fmt.storage(file.size)).font(.system(size: 12.5, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Theme.text).frame(width: 80, alignment: .trailing)
             }
-            Spacer()
-            if let date = file.modified {
-                Text(date.formatted(date: .abbreviated, time: .omitted)).font(.system(size: 11.5)).foregroundStyle(Theme.tertiary)
-            }
-            IconButton(symbol: "magnifyingglass", help: "Show in Finder") {
-                NSWorkspace.shared.activateFileViewerSelecting([file.url])
-            }
-            .opacity(hovering ? 1 : 0)
-            Text(Fmt.storage(file.size)).font(.system(size: 12.5, weight: .semibold).monospacedDigit())
-                .foregroundStyle(Theme.text).frame(width: 80, alignment: .trailing)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .background(hovering ? Color.white.opacity(0.03) : .clear)
-        .contentShape(Rectangle())
-        .onHover { hovering = $0 }
         .onTapGesture { isOn.toggle() }
     }
 }

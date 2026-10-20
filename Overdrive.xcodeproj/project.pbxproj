@@ -1,0 +1,630 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0196E44C79DE222AFBCBF2ED /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB0CA3FB01825CA398FA940 /* AppSettings.swift */; };
+		118C702C5C8E16D87D86FF1D /* AlertCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438042D38B93A06426001585 /* AlertCenter.swift */; };
+		1614C3A4127D274B3E34973D /* OverviewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7EE53495192E8A887B539C /* OverviewPage.swift */; };
+		16AF39FC4AAC61B1231554FD /* BatteryPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4BF283306E622CABECFF5D2 /* BatteryPage.swift */; };
+		1A292F9992B5F747537FD8F3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2750154435E4E6DB0A332C0 /* Theme.swift */; };
+		1E5D25F9E84725CB79B9D038 /* AIModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C6150A16DEBB3260F23AA7 /* AIModel.swift */; };
+		20DCD6EA3295AE5B1F3789CF /* MenuBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE201776A24451BB0CD80355 /* MenuBar.swift */; };
+		236953CA83C50ECCA8032DC2 /* NetworkPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC532368B2A4067183BFEE2A /* NetworkPage.swift */; };
+		23D53DAD7C53D671AFD780EC /* Windows.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF548D3592FA4653C7C5E836 /* Windows.swift */; };
+		358E3526D93037FA1B5FF343 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03D56EDDAD29B87444886EC8 /* Components.swift */; };
+		3B8032CC770A260B458387AA /* MonitorStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 496C0C3608B737290B1BBDF0 /* MonitorStore.swift */; };
+		42D290F573AC0D960D9784C4 /* DiskPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C8C36251B3B7D1DC4B7A34C /* DiskPage.swift */; };
+		45341AB1E2B7D7BC3217895D /* CleanupPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E483C71F3A696A2EADCD0E36 /* CleanupPage.swift */; };
+		4D70CDBA681F865A58FD8324 /* MemoryPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2399A3AF64359CBB240DE5 /* MemoryPage.swift */; };
+		572E5CFB73A276281BE297D5 /* MaintenancePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 482FBAF154FC2DA0036E9B1D /* MaintenancePage.swift */; };
+		5850D8BCCABAD5292D3578F9 /* AppsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127A8FD534A2EE855C06B2BF /* AppsPage.swift */; };
+		5E0E49B5A740510A19808C01 /* Shared.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE981E299F94B3E943B9978A /* Shared.swift */; };
+		6B6FD194EBD9C46C71253B1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 87EFA42E053BEC1452A2969F /* Assets.xcassets */; };
+		6E1FE9153017771CEFF2670F /* AppsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4F0A98B726F9612076E147F /* AppsModel.swift */; };
+		70E52E5F82343D7B67DBD2C1 /* CPUPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B908F38E9454EE3963F6CF6 /* CPUPage.swift */; };
+		792E496411E2310B3F4F64F9 /* SpaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0661B09928F9AA859300018D /* SpaceModel.swift */; };
+		90BED828A59D211E87A05FD6 /* Treemap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0168632AAC20FAC59B603548 /* Treemap.swift */; };
+		9DFD7E947A41E0D3C92C15DA /* GPUPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E2C609C855013C796E23B3 /* GPUPage.swift */; };
+		A2F2E33655B0B947B13496F4 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744F67B28CC0CEDCD96043CB /* Diagnostics.swift */; };
+		A4E42419C02557B0203F842D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89F79DA2B635985EDB164B0 /* SettingsView.swift */; };
+		A7881975D6B2161996DD2B81 /* SelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75562931C7840C5819A9E71 /* SelfTest.swift */; };
+		AA2D40028063EFFDFFDB0AC4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 735DE7A7CA58711C85BAAB95 /* PrivacyInfo.xcprivacy */; };
+		AA63ED3DAC580527B8AF18BF /* History.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93985F2169B830FB77953E2C /* History.swift */; };
+		ACE6F66EC243F54C8D168CDC /* OverdriveCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3A0C71DCDE649248E49D038F /* OverdriveCore */; };
+		BC6C7AD5814442554295D5C9 /* OverdriveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2048A328DD7D71B3DE575208 /* OverdriveApp.swift */; };
+		C171C0D74CA10AAF2597ED20 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3515C9FFC811616B86A0120A /* RootView.swift */; };
+		C4E3004858C767C0305F5EF9 /* OptimizeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8FE4AB11057AD2D0FDD807 /* OptimizeModels.swift */; };
+		CA3F8112E435B9A7CB5E57F3 /* ProcessesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E127DBAB1EB329B026E240E /* ProcessesPage.swift */; };
+		E7913893F964AE2B7E1595A7 /* AIPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4B329CC20CF5F5F5D5D17C /* AIPage.swift */; };
+		ED0E370B26C628E8634107D8 /* SensorsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1335A258A36CD3BA86658A22 /* SensorsPage.swift */; };
+		FE83EE22065B2913EDE4678A /* AccessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDFA12E27F8EBCFD075997E /* AccessManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0168632AAC20FAC59B603548 /* Treemap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Treemap.swift; sourceTree = "<group>"; };
+		03D56EDDAD29B87444886EC8 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		0661B09928F9AA859300018D /* SpaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceModel.swift; sourceTree = "<group>"; };
+		127A8FD534A2EE855C06B2BF /* AppsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsPage.swift; sourceTree = "<group>"; };
+		1335A258A36CD3BA86658A22 /* SensorsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorsPage.swift; sourceTree = "<group>"; };
+		1E127DBAB1EB329B026E240E /* ProcessesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesPage.swift; sourceTree = "<group>"; };
+		1EB9CE2BA380653D03A4616B /* Overdrive.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Overdrive.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2048A328DD7D71B3DE575208 /* OverdriveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverdriveApp.swift; sourceTree = "<group>"; };
+		3515C9FFC811616B86A0120A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		3F4B329CC20CF5F5F5D5D17C /* AIPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPage.swift; sourceTree = "<group>"; };
+		438042D38B93A06426001585 /* AlertCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertCenter.swift; sourceTree = "<group>"; };
+		482FBAF154FC2DA0036E9B1D /* MaintenancePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaintenancePage.swift; sourceTree = "<group>"; };
+		496C0C3608B737290B1BBDF0 /* MonitorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorStore.swift; sourceTree = "<group>"; };
+		57E2C609C855013C796E23B3 /* GPUPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPUPage.swift; sourceTree = "<group>"; };
+		6361818F9A8A960F52DF0A2F /* overdrive */ = {isa = PBXFileReference; lastKnownFileType = folder; name = overdrive; path = .; sourceTree = SOURCE_ROOT; };
+		6C8C36251B3B7D1DC4B7A34C /* DiskPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiskPage.swift; sourceTree = "<group>"; };
+		735DE7A7CA58711C85BAAB95 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		744F67B28CC0CEDCD96043CB /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
+		7DDFA12E27F8EBCFD075997E /* AccessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessManager.swift; sourceTree = "<group>"; };
+		7E8FE4AB11057AD2D0FDD807 /* OptimizeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimizeModels.swift; sourceTree = "<group>"; };
+		87EFA42E053BEC1452A2969F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8B908F38E9454EE3963F6CF6 /* CPUPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CPUPage.swift; sourceTree = "<group>"; };
+		93985F2169B830FB77953E2C /* History.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = History.swift; sourceTree = "<group>"; };
+		9CB0CA3FB01825CA398FA940 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A2750154435E4E6DB0A332C0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		A3C6150A16DEBB3260F23AA7 /* AIModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIModel.swift; sourceTree = "<group>"; };
+		A4BF283306E622CABECFF5D2 /* BatteryPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryPage.swift; sourceTree = "<group>"; };
+		A89F79DA2B635985EDB164B0 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		B4F0A98B726F9612076E147F /* AppsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsModel.swift; sourceTree = "<group>"; };
+		BB2399A3AF64359CBB240DE5 /* MemoryPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPage.swift; sourceTree = "<group>"; };
+		BE201776A24451BB0CD80355 /* MenuBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBar.swift; sourceTree = "<group>"; };
+		CF548D3592FA4653C7C5E836 /* Windows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Windows.swift; sourceTree = "<group>"; };
+		DE981E299F94B3E943B9978A /* Shared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared.swift; sourceTree = "<group>"; };
+		E483C71F3A696A2EADCD0E36 /* CleanupPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupPage.swift; sourceTree = "<group>"; };
+		F75562931C7840C5819A9E71 /* SelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfTest.swift; sourceTree = "<group>"; };
+		FA7EE53495192E8A887B539C /* OverviewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewPage.swift; sourceTree = "<group>"; };
+		FC532368B2A4067183BFEE2A /* NetworkPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkPage.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		53B29D4AB07283FE8E783391 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACE6F66EC243F54C8D168CDC /* OverdriveCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0293130473375730032A68F0 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				6361818F9A8A960F52DF0A2F /* overdrive */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		172E5022545B58091FEE1961 = {
+			isa = PBXGroup;
+			children = (
+				0293130473375730032A68F0 /* Packages */,
+				7A2008A13339FE29CD635C74 /* Resources */,
+				E55C6E0A8E971751C045B5A3 /* Sources */,
+				825B412062FE5C91CFFDD26E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		52437665BBF460AD0495DCF0 /* Pages */ = {
+			isa = PBXGroup;
+			children = (
+				3F4B329CC20CF5F5F5D5D17C /* AIPage.swift */,
+				127A8FD534A2EE855C06B2BF /* AppsPage.swift */,
+				A4BF283306E622CABECFF5D2 /* BatteryPage.swift */,
+				E483C71F3A696A2EADCD0E36 /* CleanupPage.swift */,
+				8B908F38E9454EE3963F6CF6 /* CPUPage.swift */,
+				6C8C36251B3B7D1DC4B7A34C /* DiskPage.swift */,
+				57E2C609C855013C796E23B3 /* GPUPage.swift */,
+				482FBAF154FC2DA0036E9B1D /* MaintenancePage.swift */,
+				BB2399A3AF64359CBB240DE5 /* MemoryPage.swift */,
+				FC532368B2A4067183BFEE2A /* NetworkPage.swift */,
+				FA7EE53495192E8A887B539C /* OverviewPage.swift */,
+				1E127DBAB1EB329B026E240E /* ProcessesPage.swift */,
+				1335A258A36CD3BA86658A22 /* SensorsPage.swift */,
+				A89F79DA2B635985EDB164B0 /* SettingsView.swift */,
+				DE981E299F94B3E943B9978A /* Shared.swift */,
+			);
+			path = Pages;
+			sourceTree = "<group>";
+		};
+		7A2008A13339FE29CD635C74 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				87EFA42E053BEC1452A2969F /* Assets.xcassets */,
+				735DE7A7CA58711C85BAAB95 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		7EC59B131B9FA1497FDD33E4 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				03D56EDDAD29B87444886EC8 /* Components.swift */,
+				A2750154435E4E6DB0A332C0 /* Theme.swift */,
+				0168632AAC20FAC59B603548 /* Treemap.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		825B412062FE5C91CFFDD26E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1EB9CE2BA380653D03A4616B /* Overdrive.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8D7322E2FBDB4631CAC0D476 /* Overdrive */ = {
+			isa = PBXGroup;
+			children = (
+				D060C5727624D0DD80F9421A /* App */,
+				7EC59B131B9FA1497FDD33E4 /* Components */,
+				E56AB4D5D7EC5A7738C37059 /* Model */,
+				52437665BBF460AD0495DCF0 /* Pages */,
+			);
+			path = Overdrive;
+			sourceTree = "<group>";
+		};
+		D060C5727624D0DD80F9421A /* App */ = {
+			isa = PBXGroup;
+			children = (
+				744F67B28CC0CEDCD96043CB /* Diagnostics.swift */,
+				BE201776A24451BB0CD80355 /* MenuBar.swift */,
+				2048A328DD7D71B3DE575208 /* OverdriveApp.swift */,
+				3515C9FFC811616B86A0120A /* RootView.swift */,
+				F75562931C7840C5819A9E71 /* SelfTest.swift */,
+				CF548D3592FA4653C7C5E836 /* Windows.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		E55C6E0A8E971751C045B5A3 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				8D7322E2FBDB4631CAC0D476 /* Overdrive */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		E56AB4D5D7EC5A7738C37059 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				7DDFA12E27F8EBCFD075997E /* AccessManager.swift */,
+				A3C6150A16DEBB3260F23AA7 /* AIModel.swift */,
+				438042D38B93A06426001585 /* AlertCenter.swift */,
+				9CB0CA3FB01825CA398FA940 /* AppSettings.swift */,
+				B4F0A98B726F9612076E147F /* AppsModel.swift */,
+				93985F2169B830FB77953E2C /* History.swift */,
+				496C0C3608B737290B1BBDF0 /* MonitorStore.swift */,
+				7E8FE4AB11057AD2D0FDD807 /* OptimizeModels.swift */,
+				0661B09928F9AA859300018D /* SpaceModel.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A71FEF90023589312DCD0598 /* Overdrive */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 207CB31EB52F8659C6614A99 /* Build configuration list for PBXNativeTarget "Overdrive" */;
+			buildPhases = (
+				302F226CDEF871138F19DFE8 /* Sources */,
+				8CEA6710C38BEDAA6EF7D071 /* Resources */,
+				53B29D4AB07283FE8E783391 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Overdrive;
+			packageProductDependencies = (
+				3A0C71DCDE649248E49D038F /* OverdriveCore */,
+			);
+			productName = Overdrive;
+			productReference = 1EB9CE2BA380653D03A4616B /* Overdrive.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FBF1BE188664F286E6D66A0B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					A71FEF90023589312DCD0598 = {
+						DevelopmentTeam = AQ3Z98L6Y4;
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 030549046CB7062E076F1FF1 /* Build configuration list for PBXProject "Overdrive" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 172E5022545B58091FEE1961;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4B1A8A1E2CBEF1A00B9B6BEF /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 825B412062FE5C91CFFDD26E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A71FEF90023589312DCD0598 /* Overdrive */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8CEA6710C38BEDAA6EF7D071 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6B6FD194EBD9C46C71253B1F /* Assets.xcassets in Resources */,
+				AA2D40028063EFFDFFDB0AC4 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		302F226CDEF871138F19DFE8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E5D25F9E84725CB79B9D038 /* AIModel.swift in Sources */,
+				E7913893F964AE2B7E1595A7 /* AIPage.swift in Sources */,
+				FE83EE22065B2913EDE4678A /* AccessManager.swift in Sources */,
+				118C702C5C8E16D87D86FF1D /* AlertCenter.swift in Sources */,
+				0196E44C79DE222AFBCBF2ED /* AppSettings.swift in Sources */,
+				6E1FE9153017771CEFF2670F /* AppsModel.swift in Sources */,
+				5850D8BCCABAD5292D3578F9 /* AppsPage.swift in Sources */,
+				16AF39FC4AAC61B1231554FD /* BatteryPage.swift in Sources */,
+				70E52E5F82343D7B67DBD2C1 /* CPUPage.swift in Sources */,
+				45341AB1E2B7D7BC3217895D /* CleanupPage.swift in Sources */,
+				358E3526D93037FA1B5FF343 /* Components.swift in Sources */,
+				A2F2E33655B0B947B13496F4 /* Diagnostics.swift in Sources */,
+				42D290F573AC0D960D9784C4 /* DiskPage.swift in Sources */,
+				9DFD7E947A41E0D3C92C15DA /* GPUPage.swift in Sources */,
+				AA63ED3DAC580527B8AF18BF /* History.swift in Sources */,
+				572E5CFB73A276281BE297D5 /* MaintenancePage.swift in Sources */,
+				4D70CDBA681F865A58FD8324 /* MemoryPage.swift in Sources */,
+				20DCD6EA3295AE5B1F3789CF /* MenuBar.swift in Sources */,
+				3B8032CC770A260B458387AA /* MonitorStore.swift in Sources */,
+				236953CA83C50ECCA8032DC2 /* NetworkPage.swift in Sources */,
+				C4E3004858C767C0305F5EF9 /* OptimizeModels.swift in Sources */,
+				BC6C7AD5814442554295D5C9 /* OverdriveApp.swift in Sources */,
+				1614C3A4127D274B3E34973D /* OverviewPage.swift in Sources */,
+				CA3F8112E435B9A7CB5E57F3 /* ProcessesPage.swift in Sources */,
+				C171C0D74CA10AAF2597ED20 /* RootView.swift in Sources */,
+				A7881975D6B2161996DD2B81 /* SelfTest.swift in Sources */,
+				ED0E370B26C628E8634107D8 /* SensorsPage.swift in Sources */,
+				A4E42419C02557B0203F842D /* SettingsView.swift in Sources */,
+				5E0E49B5A740510A19808C01 /* Shared.swift in Sources */,
+				792E496411E2310B3F4F64F9 /* SpaceModel.swift in Sources */,
+				1A292F9992B5F747537FD8F3 /* Theme.swift in Sources */,
+				90BED828A59D211E87A05FD6 /* Treemap.swift in Sources */,
+				23D53DAD7C53D671AFD780EC /* Windows.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1D71B59BAF18CDFAC97B8A41 /* AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/AppStore.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				OVERDRIVE_EDITION = appstore;
+				PRODUCT_BUNDLE_IDENTIFIER = com.damionrashford.overdrive;
+				PRODUCT_NAME = Overdrive;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = macosx;
+			};
+			name = AppStore;
+		};
+		766FB9EA8E92C3A144840A72 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = AQ3Z98L6Y4;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		800A8F23814BBD466E5D6CF8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/Direct.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				OVERDRIVE_EDITION = direct;
+				PRODUCT_BUNDLE_IDENTIFIER = com.damionrashford.overdrive;
+				PRODUCT_NAME = Overdrive;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		92F97BFD6315CA7F25236A36 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = AQ3Z98L6Y4;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		AEFA5D1950AFC4542519F68B /* AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = AQ3Z98L6Y4;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+			};
+			name = AppStore;
+		};
+		F0A77320F59DCC2A31A5B0F9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/Direct.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				OVERDRIVE_EDITION = direct;
+				PRODUCT_BUNDLE_IDENTIFIER = com.damionrashford.overdrive;
+				PRODUCT_NAME = Overdrive;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		030549046CB7062E076F1FF1 /* Build configuration list for PBXProject "Overdrive" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AEFA5D1950AFC4542519F68B /* AppStore */,
+				766FB9EA8E92C3A144840A72 /* Debug */,
+				92F97BFD6315CA7F25236A36 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = AppStore;
+		};
+		207CB31EB52F8659C6614A99 /* Build configuration list for PBXNativeTarget "Overdrive" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D71B59BAF18CDFAC97B8A41 /* AppStore */,
+				F0A77320F59DCC2A31A5B0F9 /* Debug */,
+				800A8F23814BBD466E5D6CF8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = AppStore;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		4B1A8A1E2CBEF1A00B9B6BEF /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3A0C71DCDE649248E49D038F /* OverdriveCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OverdriveCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = FBF1BE188664F286E6D66A0B /* Project object */;
+}

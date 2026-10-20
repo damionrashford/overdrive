@@ -13,6 +13,7 @@
 		16AF39FC4AAC61B1231554FD /* BatteryPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4BF283306E622CABECFF5D2 /* BatteryPage.swift */; };
 		1A292F9992B5F747537FD8F3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2750154435E4E6DB0A332C0 /* Theme.swift */; };
 		1E5D25F9E84725CB79B9D038 /* AIModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3C6150A16DEBB3260F23AA7 /* AIModel.swift */; };
+		1FC6DFC2688DCF4DA3C1F5D7 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A47445262A8E056A3AE5D3A7 /* UpdateChecker.swift */; };
 		20DCD6EA3295AE5B1F3789CF /* MenuBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE201776A24451BB0CD80355 /* MenuBar.swift */; };
 		236953CA83C50ECCA8032DC2 /* NetworkPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC532368B2A4067183BFEE2A /* NetworkPage.swift */; };
 		23D53DAD7C53D671AFD780EC /* Windows.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF548D3592FA4653C7C5E836 /* Windows.swift */; };
@@ -72,6 +73,7 @@
 		9CB0CA3FB01825CA398FA940 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		A2750154435E4E6DB0A332C0 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		A3C6150A16DEBB3260F23AA7 /* AIModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIModel.swift; sourceTree = "<group>"; };
+		A47445262A8E056A3AE5D3A7 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		A4BF283306E622CABECFF5D2 /* BatteryPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryPage.swift; sourceTree = "<group>"; };
 		A89F79DA2B635985EDB164B0 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B4F0A98B726F9612076E147F /* AppsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsModel.swift; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 				496C0C3608B737290B1BBDF0 /* MonitorStore.swift */,
 				7E8FE4AB11057AD2D0FDD807 /* OptimizeModels.swift */,
 				0661B09928F9AA859300018D /* SpaceModel.swift */,
+				A47445262A8E056A3AE5D3A7 /* UpdateChecker.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -321,6 +324,7 @@
 				792E496411E2310B3F4F64F9 /* SpaceModel.swift in Sources */,
 				1A292F9992B5F747537FD8F3 /* Theme.swift in Sources */,
 				90BED828A59D211E87A05FD6 /* Treemap.swift in Sources */,
+				1FC6DFC2688DCF4DA3C1F5D7 /* UpdateChecker.swift in Sources */,
 				23D53DAD7C53D671AFD780EC /* Windows.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

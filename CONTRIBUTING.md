@@ -24,6 +24,8 @@ OVERDRIVE_HOME=/tmp/fake build/Overdrive.app/Contents/MacOS/Overdrive --e2e   # 
 
 `xcodegen generate` rebuilds `Overdrive.xcodeproj` from `project.yml`; edit the YAML, not the project.
 
+Releases: bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml`, add a section to `CHANGELOG.md`, tag `vX.Y.Z` and push the tag. The release workflow builds, packages (`scripts/package.sh`) and publishes the DMG, zip and checksums, and updates the Homebrew tap when the `TAP_TOKEN` secret is present. `scripts/release.sh` is the notarized / App Store path for when a Developer ID exists.
+
 ## Rules that keep the app honest
 
 - Never delete a person's own files: large files, downloads, app leftovers and startup items go to the Trash.

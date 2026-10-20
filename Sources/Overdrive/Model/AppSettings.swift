@@ -54,6 +54,8 @@ final class AppSettings {
         cleanupExclusions = Set(defaults.stringArray(forKey: "cleanupExclusions") ?? [])
         showPublicIP = defaults.bool(forKey: "showPublicIP")
         hasSeenWelcome = defaults.bool(forKey: "hasSeenWelcome")
+        checkForUpdates = defaults.bool(forKey: "checkForUpdates")
+        lastUpdateCheck = defaults.object(forKey: "lastUpdateCheck") as? Date
         alertRules = Self.decode(defaults.data(forKey: "alertRules")) ?? AlertRule.defaults
     }
 
@@ -66,6 +68,9 @@ final class AppSettings {
     var cleanupExclusions: Set<String> { didSet { defaults.set(Array(cleanupExclusions).sorted(), forKey: "cleanupExclusions") } }
     var showPublicIP: Bool { didSet { defaults.set(showPublicIP, forKey: "showPublicIP") } }
     var hasSeenWelcome: Bool { didSet { defaults.set(hasSeenWelcome, forKey: "hasSeenWelcome") } }
+    /// Weekly GitHub release check for the direct edition. Off until the person turns it on.
+    var checkForUpdates: Bool { didSet { defaults.set(checkForUpdates, forKey: "checkForUpdates") } }
+    var lastUpdateCheck: Date? { didSet { defaults.set(lastUpdateCheck, forKey: "lastUpdateCheck") } }
     var alertRules: [AlertRule] { didSet { defaults.set(Self.encode(alertRules), forKey: "alertRules") } }
 
     func rule(_ kind: AlertKind) -> AlertRule {

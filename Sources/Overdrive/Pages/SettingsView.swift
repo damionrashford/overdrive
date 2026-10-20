@@ -81,9 +81,49 @@ private struct GeneralSettings: View {
                     .toggleStyle(.switch).labelsHidden()
                 }
             }
+            if !store.capabilities.isSandboxed {
+                Section("Updates") {
+                    SettingRow(title: "Check for updates weekly",
+                               detail: "Asks GitHub for the latest release. The only data sent is the request itself.") {
+                        Toggle("", isOn: $settings.checkForUpdates).toggleStyle(.switch).labelsHidden()
+                    }
+                    HStack {
+                        UpdateStatus()
+                        Spacer()
+                        Button(store.updates.state == .checking ? "Checking…" : "Check Now") {
+                            Task { await store.updates.check(settings: settings) }
+                        }
+                        .disabled(store.updates.state == .checking)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .onAppear { launchAtLogin = store.launchAtLogin }
+    }
+}
+
+struct UpdateStatus: View {
+    @Environment(MonitorStore.self) private var store
+
+    var body: some View {
+        switch store.updates.state {
+        case .idle:
+            Text(store.settings.lastUpdateCheck.map { "Last checked \($0.formatted(.relative(presentation: .named)))" } ?? "Not checked yet")
+                .font(.system(size: 12)).foregroundStyle(.secondary)
+        case .checking:
+            Text("Contacting GitHub…").font(.system(size: 12)).foregroundStyle(.secondary)
+        case .upToDate:
+            Label("Overdrive \(Bundle.main.shortVersion) is the latest version.", systemImage: "checkmark.circle.fill")
+                .font(.system(size: 12)).foregroundStyle(Theme.good)
+        case .available(let version, let url):
+            HStack(spacing: 8) {
+                Label("Version \(version) is available.", systemImage: "arrow.down.circle.fill").font(.system(size: 12)).foregroundStyle(Theme.cpu[0])
+                Link("Download", destination: url).font(.system(size: 12, weight: .semibold))
+            }
+        case .failed(let message):
+            Label(message, systemImage: "exclamationmark.triangle").font(.system(size: 12)).foregroundStyle(Theme.warn)
+        }
     }
 }
 

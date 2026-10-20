@@ -49,6 +49,10 @@ struct OverdriveApp: App {
             CommandGroup(replacing: .help) {
                 Button("Copy System Report") { Report.copy(store: store) }.keyboardShortcut("r", modifiers: [.command, .shift])
                 Button("Save System Report…") { Report.save(store: store) }
+                if !store.capabilities.isSandboxed {
+                    Divider()
+                    Button("Check for Updates…") { Task { await store.updates.check(settings: store.settings) } }
+                }
                 Divider()
                 Link("Overdrive on GitHub", destination: Links.repository)
                 Link("Privacy Policy", destination: Links.privacy)
@@ -74,6 +78,7 @@ enum Links {
     static let privacy = URL(string: "https://github.com/damionrashford/overdrive/blob/main/docs/privacy-policy.md")!
     static let issues = URL(string: "https://github.com/damionrashford/overdrive/issues")!
     static let license = URL(string: "https://github.com/damionrashford/overdrive/blob/main/LICENSE")!
+    static let releases = URL(string: "https://github.com/damionrashford/overdrive/releases/latest")!
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {

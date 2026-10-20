@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Tools
+        run: brew install xcodegen
+
+      - name: Core tests
+        run: swift test 2>&1 | tail -20
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build direct edition
+        run: |
+          xcodebuild -project Overdrive.xcodeproj -scheme Overdrive -configuration Release \
+            -derivedDataPath build/dd CODE_SIGN_IDENTITY=- build | grep -E 'error:|warning: [^M]|BUILD ' || true
+          test -x build/dd/Build/Products/Release/Overdrive.app/Contents/MacOS/Overdrive
+
+      - name: Build App Store edition
+        run: |
+          xcodebuild -project Overdrive.xcodeproj -scheme Overdrive -configuration AppStore \
+            -derivedDataPath build/dd CODE_SIGN_IDENTITY=- build | grep -E 'error:|BUILD ' || true
+          codesign -d --entitlements - build/dd/Build/Products/AppStore/Overdrive.app 2>&1 | grep -q app-sandbox
+
+      - name: Smoke test
+        run: build/dd/Build/Products/Release/Overdrive.app/Contents/MacOS/Overdrive --dump | head -20

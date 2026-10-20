@@ -1,0 +1,37 @@
+name: Bug report
+description: Something is wrong, shows the wrong number, or did not do what the button said.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Overdrive version and edition
+      description: Overdrive › About Overdrive, e.g. "1.1.0 (2) · Direct edition"
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS
+      description: e.g. "MacBook Pro 14-inch M5 Pro, macOS 27.0.1"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: System report
+      description: Help › Copy System Report, pasted here. It contains hardware and usage numbers, no personal files.
+      render: text
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data
+      options:
+        - label: This bug deleted or moved files it should not have (handled first; see SECURITY.md for private reporting)

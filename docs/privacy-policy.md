@@ -14,10 +14,11 @@ To do its job, Overdrive reads system information locally: CPU, memory, GPU, dis
 
 ## Network access
 
-Overdrive makes no network requests, with two local exceptions and one optional one:
+Overdrive makes no network requests, with one local exception and two optional ones:
 
 - It talks to local AI runtimes only on the loopback address `127.0.0.1` (Ollama on port 11434, LM Studio on port 1234, llama.cpp on 8080) to list loaded models. These connections never leave your Mac.
 - If you turn on "Show public IP" on the Network page (off by default), Overdrive sends one request to `api64.ipify.org` to display your public IP address. That service receives your IP address, which is inherent to any internet request. Turn the option off and no such request is made.
+- In the direct edition, if you turn on "Check for updates weekly" in Settings (off by default) or use Help › Check for Updates, Overdrive requests `api.github.com/repos/damionrashford/overdrive/releases/latest`. GitHub receives a standard HTTP request and nothing else. The App Store edition never does this; the App Store delivers its updates.
 
 ## Files Overdrive changes
 

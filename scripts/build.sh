@@ -17,7 +17,8 @@ for arg in "$@"; do
   esac
 done
 
-[ -d Overdrive.xcodeproj ] || xcodegen generate
+# Always regenerate: xcodegen lists source files at generation time, so new files would otherwise be missed.
+xcodegen generate >/dev/null
 xcodebuild -project Overdrive.xcodeproj -scheme Overdrive -configuration "$CONFIG" -derivedDataPath build/dd build \
   | grep -E 'error:|warning: [^M]|BUILD ' || true
 rm -rf "$OUT"

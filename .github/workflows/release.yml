@@ -1,0 +1,84 @@
+name: Release
+
+# Tag a commit `vX.Y.Z` (matching MARKETING_VERSION in project.yml) to build the direct edition,
+# package it and publish a GitHub Release. Without Apple signing secrets the app is ad-hoc signed.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package and publish
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Tools
+        run: brew install xcodegen create-dmg
+
+      - name: Check tag matches project version
+        run: |
+          VERSION=$(sed -n 's/.*MARKETING_VERSION: "\(.*\)".*/\1/p' project.yml | head -1)
+          [ "v$VERSION" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} does not match MARKETING_VERSION $VERSION"; exit 1; }
+
+      - name: Tests
+        run: swift test 2>&1 | tail -5
+
+      - name: Build
+        run: scripts/build.sh
+
+      - name: Package
+        run: scripts/package.sh
+
+      - name: Release notes
+        run: |
+          VERSION=$(sed -n 's/.*MARKETING_VERSION: "\(.*\)".*/\1/p' project.yml | head -1)
+          awk -v v="## $VERSION" '$0 == v {flag=1; next} /^## / {flag=0} flag' CHANGELOG.md > build/notes.md
+          cat >> build/notes.md <<'EOF'
+
+          ### Install
+          ```sh
+          brew tap damionrashford/tap && brew install --cask --no-quarantine overdrive
+          ```
+          Or download the DMG, drag Overdrive to Applications, and on first launch allow it in System Settings › Privacy & Security (this build is signed but not notarized by Apple). See [docs/install.md](https://github.com/damionrashford/overdrive/blob/main/docs/install.md).
+
+          ### Checksums
+          EOF
+          echo '```' >> build/notes.md
+          cat build/SHA256SUMS >> build/notes.md
+          echo '```' >> build/notes.md
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: build/notes.md
+          files: |
+            build/Overdrive-*.dmg
+            build/Overdrive-*.zip
+            build/SHA256SUMS
+
+      - name: Update Homebrew tap
+        if: ${{ env.TAP_TOKEN != '' }}
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          VERSION=$(sed -n 's/.*MARKETING_VERSION: "\(.*\)".*/\1/p' project.yml | head -1)
+          SHA=$(awk '/\.dmg$/ {print $1}' build/SHA256SUMS)
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/damionrashford/homebrew-tap.git" build/tap
+          mkdir -p build/tap/Casks
+          sed -e "s/^  version \".*\"/  version \"$VERSION\"/" -e "s/^  sha256 \".*\"/  sha256 \"$SHA\"/" \
+            packaging/homebrew-tap/Casks/overdrive.rb > build/tap/Casks/overdrive.rb
+          cd build/tap
+          git config user.name "overdrive-release"
+          git config user.email "release@overdrive.invalid"
+          git add Casks/overdrive.rb
+          git commit -m "overdrive $VERSION" && git push

@@ -1,0 +1,23 @@
+name: Feature request
+description: Something Overdrive should show, measure or clean.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to find out or fix?
+      description: The situation, not the solution. "I can't tell which app is writing to disk all night" beats "add a disk column".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could Overdrive help?
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Edition
+      options:
+        - Either
+        - Direct (download)
+        - App Store (sandboxed)

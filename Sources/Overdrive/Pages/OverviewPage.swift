@@ -8,6 +8,12 @@ struct OverviewPage: View {
         PageScaffold(page: .overview, subtitle: "\(store.info.modelName) · \(store.info.chip) · \(store.info.osVersion)") {
             Pill(text: "Up \(Fmt.duration(store.info.uptime))", color: Theme.secondary, symbol: "clock")
         } content: {
+            if let update = store.updates.available {
+                Notice(symbol: "arrow.down.circle.fill", color: Theme.cpu[0],
+                       text: "Overdrive \(update.version) is available. You have \(Bundle.main.shortVersion).") {
+                    Link("Download", destination: update.url).font(.system(size: 12, weight: .semibold))
+                }
+            }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
                 MetricTile(page: .cpu, value: store.cpu.total, headline: Fmt.percent(store.cpu.total),
                            detail: store.sensors.average(.cpu).map { "\(store.settings.temperature($0)) · load \(String(format: "%.1f", store.cpu.loadAverage[0]))" }

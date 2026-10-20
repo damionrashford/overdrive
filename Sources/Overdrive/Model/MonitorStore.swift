@@ -120,6 +120,7 @@ final class MonitorStore {
     let space = SpaceModel()
     let apps = AppsModel()
     let ai = AIModel()
+    let updates = UpdateChecker()
 
     @ObservationIgnored private let engine: SamplerEngine
     @ObservationIgnored private var loop: Task<Void, Never>?
@@ -140,6 +141,7 @@ final class MonitorStore {
         loop = Task { [weak self] in
             guard let self else { return }
             sensorsAvailable = await engine.sensorsAvailable
+            if !capabilities.isSandboxed { Task { await updates.checkIfDue(settings: settings) } }
             // A quick second sample so CPU and per-process deltas are meaningful right away.
             await tick(includeVolumes: true)
             try? await Task.sleep(for: .milliseconds(600))

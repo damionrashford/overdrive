@@ -6,7 +6,7 @@ Add entries under **Unreleased** as you go; `scripts/bump.sh` turns that section
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-10-21
+## [1.1.0] - 2026-10-20
 
 ### Added
 - Two editions from one codebase: App Store (sandboxed) and direct (Developer ID), with runtime `Capabilities` deciding what each may do.

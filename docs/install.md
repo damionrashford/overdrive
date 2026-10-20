@@ -41,7 +41,7 @@ brew install xcodegen
 scripts/build.sh --install        # builds the direct edition and copies it to /Applications
 ```
 
-`scripts/build.sh --appstore` builds the sandboxed edition into `build/` if you want to see how it behaves.
+`scripts/build.sh --appstore` builds the sandboxed edition into `build/` if you want to see how it behaves. The Xcode project is generated on the fly from `project.yml`; `xcodegen generate && open Overdrive.xcodeproj` opens it in Xcode.
 
 ## First launch
 

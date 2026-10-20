@@ -42,7 +42,7 @@ jobs:
       - name: Release notes
         run: |
           VERSION=$(sed -n 's/.*MARKETING_VERSION: "\(.*\)".*/\1/p' project.yml | head -1)
-          awk -v v="## $VERSION" '$0 == v {flag=1; next} /^## / {flag=0} flag' CHANGELOG.md > build/notes.md
+          awk -v v="## [$VERSION]" 'index($0, v) == 1 {flag=1; next} /^## / {flag=0} flag' CHANGELOG.md > build/notes.md
           cat >> build/notes.md <<'EOF'
 
           ### Install

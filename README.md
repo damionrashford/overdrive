@@ -36,7 +36,7 @@ brew install --cask --no-quarantine overdrive
 
 **Download:** grab the DMG from the [latest release](https://github.com/damionrashford/overdrive/releases/latest), drag Overdrive to Applications. On first launch macOS asks you to allow it once in *System Settings › Privacy & Security* because the build is signed but not yet notarized; `--no-quarantine` above skips that step. Details, checksums, permissions and troubleshooting: [docs/install.md](docs/install.md).
 
-**Build from source:** `brew install xcodegen && scripts/build.sh --install` (Xcode 27).
+**Build from source:** `brew install xcodegen && scripts/build.sh --install` (Xcode 27). To work in Xcode, `xcodegen generate && open Overdrive.xcodeproj`.
 
 Requires macOS 15 or later on Apple silicon.
 
@@ -108,7 +108,8 @@ A monitor should not be the thing you are monitoring. Overdrive idles at about 2
 
 - [Architecture](docs/architecture.md): module map, data flow, rendering budget, safety model.
 - [Installing](docs/install.md): Homebrew, DMG, source, first launch, permissions, troubleshooting.
-- [Contributing](CONTRIBUTING.md): building, testing, release process, the rules that keep the app honest.
+- [Contributing](CONTRIBUTING.md): building, testing, the rules that keep the app honest.
+- [Releasing](docs/releasing.md): versioning, changelog, the tag-driven release pipeline, Homebrew tap.
 - [Security](SECURITY.md): how to report anything that could touch files it should not.
 - [Changelog](CHANGELOG.md).
 

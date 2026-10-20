@@ -1,4 +1,77 @@
-.build/
+# ---- Build products ----------------------------------------------------------
+# Everything the build writes. Never commit app bundles, archives, disk images or derived data.
 build/
+.build/
 .swiftpm/
+DerivedData/
+*.xcarchive
+*.dmg
+*.pkg
+*.zip
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# ---- Generated project ----------------------------------------------------------
+# Overdrive.xcodeproj is produced from project.yml by `xcodegen generate` (scripts/build.sh does it).
+# Committing it only creates merge conflicts and stale file lists.
+Overdrive.xcodeproj/
+*.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+.swiftpm/xcode/package.xcworkspace/
+.vscode/
+.idea/
+
+# ---- Signing and release secrets -------------------------------------------------
+# Certificates, keys, profiles and export plists with team details stay on the release machine.
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.p8
+AuthKey_*.p8
+ExportOptions*.plist
+!docs/**/ExportOptions*.plist
+notarization-*.json
+*.keychain-db
+
+# ---- Local environment ------------------------------------------------------------
+.env
+.env.*
+*.local
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+Icon?
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+*.swp
+*.swo
+*~
+
+# ---- Test and tooling output ------------------------------------------------------
+# Scratch homes, fixtures and screenshots produced while testing live outside the repo or under build/.
+fakehome/
+screenshots/
+*.log
+*.err
+coverage/
+*.profraw
+*.profdata
+.xcresult/
+*.xcresult
+TestResults/
+timeline.xctimeline
+playground.xcworkspace
+
+# ---- Package managers --------------------------------------------------------------
+# No dependencies today. If any are added, commit Package.resolved for the app; keep these out.
+Pods/
+Carthage/Build/
+node_modules/

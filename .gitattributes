@@ -1,0 +1,31 @@
+# Normalize line endings; Swift, YAML, shell and Markdown are always LF.
+* text=auto eol=lf
+*.swift text diff=swift
+*.sh text eol=lf
+*.yml text
+*.md text
+*.plist text
+*.entitlements text
+*.rb text
+
+# Binary assets: no diffs, no EOL conversion.
+*.png binary
+*.icns binary
+*.tiff binary
+*.jpg binary
+*.car binary
+
+# GitHub language statistics: count the app, not the generated icon set, docs or packaging.
+docs/** linguist-documentation
+packaging/** linguist-vendored
+scripts/*.swift linguist-detectable=true
+Resources/Assets.xcassets/** linguist-generated
+*.xcprivacy linguist-language=XML
+
+# Keep release tarballs small and clean.
+.github export-ignore
+docs/images export-ignore
+packaging export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+.editorconfig export-ignore

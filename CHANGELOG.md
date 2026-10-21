@@ -6,9 +6,6 @@ Add entries under **Unreleased** as you go; `scripts/bump.sh` turns that section
 
 ## [Unreleased]
 
-### Added
-- One-line installer script (`install.sh`) that verifies the release checksum before installing.
-
 ## [1.1.0] - 2026-10-20
 
 ### Added
@@ -26,6 +23,7 @@ Add entries under **Unreleased** as you go; `scripts/bump.sh` turns that section
 - Opt-in weekly update check against GitHub Releases (direct edition).
 - Light Mode, VoiceOver labels on gauges, charts and lists, Reduce Motion support.
 - Privacy manifest, entitlements for both editions, DMG packaging, Homebrew cask template, CI and release workflows.
+- One-line installer script (`install.sh`) that verifies the release checksum before installing.
 
 ### Changed
 - Process list works inside the App Sandbox through `proc_pidinfo`; quitting other apps is a direct-edition feature because the sandbox forbids it.

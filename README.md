@@ -5,8 +5,8 @@
 <h1 align="center">Overdrive</h1>
 
 <p align="center">
-  A system monitor and cleaner for the Mac, built for the local-AI era.<br>
-  Native SwiftUI. No account, no analytics, nothing leaves your Mac. Free and open source.
+  A free, open-source system monitor and cleaner for the Mac, built for the local-AI era.<br>
+  Native SwiftUI for Apple silicon. No account, no analytics, nothing leaves your Mac.
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
   <a href="https://github.com/damionrashford/overdrive/actions/workflows/ci.yml"><img src="https://github.com/damionrashford/overdrive/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/macOS-15%2B-111?logo=apple&logoColor=white" alt="macOS 15+">
   <img src="https://img.shields.io/badge/Apple%20silicon-arm64-111?logo=apple&logoColor=white" alt="Apple silicon">
-  <img src="https://img.shields.io/badge/Swift-6-f05138?logo=swift&logoColor=white" alt="Swift 6">
+  <img src="https://img.shields.io/badge/Swift-SwiftUI-f05138?logo=swift&logoColor=white" alt="Swift and SwiftUI">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT license"></a>
 </p>
 
@@ -24,6 +24,8 @@
     <img src="docs/images/overview-dark.png" width="100%" alt="Overdrive overview: live gauges for CPU, memory, GPU and storage, a health score with recommendations, network and system summary">
   </picture>
 </p>
+
+Overdrive is a free, open-source Mac system monitor, menu bar stats app and disk cleaner for Apple silicon. It shows live CPU, memory, GPU, disk, network, battery and temperature readings, finds what is slowing your Mac down, and cleans up caches, large files and leftover app data. It also tracks local AI workloads (Ollama, LM Studio, llama.cpp, MLX) and what loaded models cost your unified memory.
 
 ## Install
 
@@ -86,6 +88,31 @@ Requires macOS 15 or later on Apple silicon.
 
 The same binary runs as either edition; only the entitlements differ. `Capabilities` decides at launch, so the sandboxed build degrades deliberately instead of failing quietly. The App Store listing is pending ([docs/app-store.md](docs/app-store.md)).
 
+## How it compares
+
+| | Overdrive | Activity Monitor | Paid monitors and cleaners |
+|---|---|---|---|
+| Price and source | Free, MIT, open source | Built in | Paid or subscription, closed source |
+| Menu bar graphs and alerts | ✓ | Dock icon graphs only | ✓ |
+| Temperatures, fans, power (SMC) | ✓ | ✗ | ✓ |
+| Cleanup, uninstaller, storage map | ✓ | ✗ | ✓ |
+| Local AI model memory and orphaned model blobs | ✓ | ✗ | ✗ |
+| Account, analytics or telemetry | None | None | Varies |
+
+## FAQ
+
+**Is Overdrive safe to run cleanup with?** Every item is measured and listed before you confirm, ignore lists are respected, and your own files only ever go to the Trash. The safety model is in [docs/architecture.md](docs/architecture.md).
+
+**Does it work on Intel Macs or older macOS?** No. It needs macOS 15 or later on Apple silicon.
+
+**Why does macOS warn about it on first launch?** The build is signed but not yet notarized. The one-line installer and the Homebrew command above skip the prompt; the DMG needs a one-time approval in *System Settings › Privacy & Security*.
+
+**How do I see my Mac's CPU temperature and fan speed?** Use the direct edition from the releases page. The Mac App Store edition cannot read the SMC under the App Sandbox.
+
+**How do I free memory or see which app is using it?** The Memory page breaks down pressure, app, wired, compressed, cached and swap, and the Processes page groups helpers under their app. Free memory is one click in Maintenance.
+
+**Does it send data anywhere?** No. See [Privacy](#privacy).
+
 ## Where the numbers come from
 
 | Metric | Source |
@@ -119,7 +146,7 @@ A monitor should not be the thing you are monitoring. Overdrive idles at about 2
 - [Security](SECURITY.md): how to report anything that could touch files it should not.
 - [Changelog](CHANGELOG.md).
 
-Built with Swift 6 and SwiftUI, no third-party dependencies. The SMC sensor-key tables follow the community map maintained by the [Stats](https://github.com/exelban/stats) project.
+Built with Swift and SwiftUI, no third-party dependencies. The SMC sensor-key tables follow the community map maintained by the [Stats](https://github.com/exelban/stats) project.
 
 ## License
 
